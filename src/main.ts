@@ -53,7 +53,9 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}/api`);
   console.log(`Swagger documentation: http://localhost:${port}/api/docs`);
-  console.log(`Rate limiting: ${process.env.THROTTLE_LIMIT} requests per ${process.env.THROTTLE_TTL} seconds`);
+  console.log(
+    `Rate limiting: ${process.env.THROTTLE_LIMIT} requests per ${process.env.THROTTLE_TTL} seconds`,
+  );
 }
 
 void bootstrap();
