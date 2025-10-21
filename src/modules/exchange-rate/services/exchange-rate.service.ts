@@ -24,10 +24,7 @@ export class ExchangeRateService {
 
     return {
       id: exchangeRate.id,
-      currencyFrom: exchangeRate.currencyFrom,
-      currencyTo: exchangeRate.currencyTo,
       rate: exchangeRate.rate.toString(),
-      description: exchangeRate.description,
       createdAt: exchangeRate.createdAt,
       updatedAt: exchangeRate.updatedAt,
     };

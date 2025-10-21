@@ -49,11 +49,11 @@
 | `product_price_tg` | `amount_mnt` | Decimal → Decimal | **字段重命名**: 蒙古国货币 |
 | `product_price_rmb` | `amount_cny` | Decimal → Decimal | **字段重命名**: 人民币 |
 | - | `exchange_rate` | - → Decimal? | **新增**: 汇率快照（迁移时使用 440） |
-| `product_name` | `product_name` | String → String | 保持不变 |
-| - | `product_eng_name` | - → String | **新增**: 套餐英文名称（老数据为空） |
-| `product_unit` | `product_unit` | Int? → Int? | 保持不变 |
-| `product_data` | `product_data` | String? → String? | 保持不变 |
-| `product_days` | `product_days` | Int? → Int? | 保持不变 |
+| `product_name` | `package_name` | String → String | **字段重命名** |
+| - | `package_eng_name` | - → String | **新增**: 套餐英文名称（老数据为空） |
+| `product_unit` | `package_unit` | Int? → Int? | **字段重命名** |
+| `product_data` | `package_data` | String? → String? | **字段重命名** |
+| `product_days` | `package_days` | Int? → Int? | **字段重命名** |
 | `payment_status` | `payment_status` | String → String | 保持不变 |
 | `recharge_status` | `recharge_status` | String → String | **新增**: 充值状态（老表已有） |
 | `created_at` | `created_at` | DateTime → DateTime | 保持不变 |
@@ -155,11 +155,11 @@ INSERT INTO unitel_orders (
   amount_cny,
   exchange_rate,
   package_code,
-  product_name,
-  product_eng_name,
-  product_unit,
-  product_data,
-  product_days,
+  package_name,
+  package_eng_name,
+  package_unit,
+  package_data,
+  package_days,
   payment_status,
   recharge_status,
   created_at,
@@ -190,11 +190,11 @@ SELECT
   o.product_price_rmb::DECIMAL(10,2),   -- amount_cny
   440::DECIMAL(10,4),                   -- exchange_rate: 历史汇率快照
   o.product_code,                       -- package_code
-  o.product_name,                       -- product_name
-  '',                                   -- product_eng_name: 老数据无此字段
-  o.product_unit,                       -- product_unit
-  o.product_data,                       -- product_data
-  o.product_days,                       -- product_days
+  o.product_name,                       -- package_name
+  '',                                   -- package_eng_name: 老数据无此字段
+  o.product_unit,                       -- package_unit
+  o.product_data,                       -- package_data
+  o.product_days,                       -- package_days
   o.payment_status,                     -- payment_status
   o.recharge_status,                    -- recharge_status
   o.created_at,                         -- created_at
@@ -377,7 +377,7 @@ psql -U username -d elife_db < old_elife_backup_YYYYMMDD.sql
 
 老数据中以下字段为空，需要在应用层处理：
 
-- `product_eng_name` - 套餐英文名称（老数据无此字段）
+- `package_eng_name` - 套餐英文名称（老数据无此字段）
 - `sv_id` - Unitel 服务ID（老系统未保存）
 - `seq` - Unitel 序列号（老系统未保存）
 - `vat_info` - VAT 发票信息（老系统未保存）

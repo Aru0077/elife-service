@@ -335,15 +335,15 @@ interface Service {
 - `product_code` → `packageCode`
 - `product_price_tg` → `amountMnt`
 - `product_price_rmb` → `amountCny`
-- `product_name` → `productName`
-- `product_unit` → `productUnit`
-- `product_data` → `productData`
-- `product_days` → `productDays`
+- `product_name` → `packageName`
+- `product_unit` → `packageUnit`
+- `product_data` → `packageData`
+- `product_days` → `packageDays`
 - `payment_status` → `paymentStatus`
 - `recharge_status` → `rechargeStatus`
 
 **新增字段** (老数据无此字段):
-- `productEngName` - 套餐英文名称
+- `packageEngName` - 套餐英文名称
 - `exchangeRate` - 汇率快照（迁移时使用 440）
 - `isBlacklisted` - 黑名单标记（默认 false）
 

@@ -43,13 +43,10 @@ model Admin {
 
 /// 汇率表
 model ExchangeRate {
-  id           String   @id @default("MNT_CNY") /// 固定ID
-  currencyFrom String   @map("currency_from") /// 源货币代码 (MNT)
-  currencyTo   String   @map("currency_to") /// 目标货币代码 (CNY)
-  rate         Decimal  @db.Decimal(10, 4) /// 汇率值 (440)
-  description  String? /// 描述信息
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id        String   @id @default("MNT_CNY") /// 固定ID
+  rate      Decimal  @db.Decimal(10, 4) /// 汇率值 (440)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("exchange_rates")
 }
@@ -74,11 +71,11 @@ model UnitelOrder {
 
   // 产品信息（资费列表字段）
   packageCode    String  @map("package_code") /// 套餐代码
-  productName    String  @map("product_name") /// 套餐名称（蒙古语）
-  productEngName String  @map("product_eng_name") /// 套餐英文名称
-  productUnit    Int?    @map("product_unit") /// 话费单位
-  productData    String? @map("product_data") /// 流量大小（如"3GB"）
-  productDays    Int?    @map("product_days") /// 有效期天数
+  packageName    String  @map("package_name") /// 套餐名称（蒙古语）
+  packageEngName String  @map("package_eng_name") /// 套餐英文名称
+  packageUnit    Int?    @map("package_unit") /// 话费单位
+  packageData    String? @map("package_data") /// 流量大小（如"3GB"）
+  packageDays    Int?    @map("package_days") /// 有效期天数
 
   // 状态管理
   paymentStatus  String @map("payment_status") /// 支付状态: unpaid | paid | refunded
