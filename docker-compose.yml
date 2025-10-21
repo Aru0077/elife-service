@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: mongolian
+      POSTGRES_PASSWORD: elife
+      POSTGRES_DB: elife-db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data  # 用匿名卷简化本地数据持久化
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data  # 匿名卷持久化redis数据
+
+volumes:
+  postgres-data:
+  redis-data:
