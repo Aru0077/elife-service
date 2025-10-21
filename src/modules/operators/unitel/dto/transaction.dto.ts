@@ -12,7 +12,10 @@ export class TransactionDto {
   @IsNotEmpty()
   amount: string;
 
-  @ApiProperty({ example: 'wechat-test', description: 'Transaction description' })
+  @ApiProperty({
+    example: 'wechat-test',
+    description: 'Transaction description',
+  })
   @IsString()
   @IsNotEmpty()
   description: string;

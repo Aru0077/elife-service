@@ -19,7 +19,10 @@ export class PaymentRequestDto {
   @IsNotEmpty()
   remark: string;
 
-  @ApiProperty({ example: '1', description: 'VAT flag (1 = with VAT, 0 = without VAT)' })
+  @ApiProperty({
+    example: '1',
+    description: 'VAT flag (1 = with VAT, 0 = without VAT)',
+  })
   @IsString()
   @IsNotEmpty()
   vatflag: string;

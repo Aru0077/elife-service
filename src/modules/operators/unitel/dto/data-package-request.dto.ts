@@ -14,12 +14,18 @@ export class DataPackageRequestDto {
   @IsNotEmpty()
   package: string;
 
-  @ApiProperty({ example: '1', description: 'VAT flag (1 = with VAT, 0 = without VAT)' })
+  @ApiProperty({
+    example: '1',
+    description: 'VAT flag (1 = with VAT, 0 = without VAT)',
+  })
   @IsString()
   @IsNotEmpty()
   vatflag: string;
 
-  @ApiProperty({ example: '', description: 'VAT registration number (optional)' })
+  @ApiProperty({
+    example: '',
+    description: 'VAT registration number (optional)',
+  })
   @IsString()
   vat_register_no: string;
 

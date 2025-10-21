@@ -40,23 +40,21 @@ export class UnitelApiService {
     const url = `${UNITEL_CONFIG.baseUrl}/service/servicetype`;
 
     try {
-      const response = await this.makeAuthenticatedRequest<ServiceTypeResponseDto>(
-        url,
-        dto,
-        token,
-        username,
-        password,
-      );
+      const response =
+        await this.makeAuthenticatedRequest<ServiceTypeResponseDto>(
+          url,
+          dto,
+          token,
+          username,
+          password,
+        );
 
       this.logger.debug(
         `Retrieved service type for MSISDN: ${dto.msisdn}, type: ${response.servicetype}`,
       );
       return response;
     } catch (error) {
-      this.logger.error(
-        `Failed to get service type for ${dto.msisdn}`,
-        error,
-      );
+      this.logger.error(`Failed to get service type for ${dto.msisdn}`, error);
       throw error;
     }
   }
@@ -118,10 +116,7 @@ export class UnitelApiService {
       );
       return response;
     } catch (error) {
-      this.logger.error(
-        `Failed to recharge balance for ${dto.msisdn}`,
-        error,
-      );
+      this.logger.error(`Failed to recharge balance for ${dto.msisdn}`, error);
       throw error;
     }
   }
@@ -221,7 +216,10 @@ export class UnitelApiService {
 
       // Check if response indicates error
       const responseData = response.data as any;
-      if (responseData.result === '401' && retryCount < UNITEL_CONFIG.retryAttempts) {
+      if (
+        responseData.result === '401' &&
+        retryCount < UNITEL_CONFIG.retryAttempts
+      ) {
         this.logger.warn('Received 401 error, clearing token and retrying...');
         this.authService.clearToken();
 
@@ -242,7 +240,10 @@ export class UnitelApiService {
 
       return response.data;
     } catch (error: any) {
-      if (error.response?.status === 401 && retryCount < UNITEL_CONFIG.retryAttempts) {
+      if (
+        error.response?.status === 401 &&
+        retryCount < UNITEL_CONFIG.retryAttempts
+      ) {
         this.logger.warn('Received HTTP 401, clearing token and retrying...');
         this.authService.clearToken();
 

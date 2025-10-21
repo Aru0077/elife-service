@@ -9,17 +9,26 @@ export class RechargeRequestDto {
   @IsNotEmpty()
   msisdn: string;
 
-  @ApiProperty({ example: 'SD3000', description: 'Card code for balance recharge' })
+  @ApiProperty({
+    example: 'SD3000',
+    description: 'Card code for balance recharge',
+  })
   @IsString()
   @IsNotEmpty()
   card: string;
 
-  @ApiProperty({ example: '1', description: 'VAT flag (1 = with VAT, 0 = without VAT)' })
+  @ApiProperty({
+    example: '1',
+    description: 'VAT flag (1 = with VAT, 0 = without VAT)',
+  })
   @IsString()
   @IsNotEmpty()
   vatflag: string;
 
-  @ApiProperty({ example: '', description: 'VAT registration number (optional)' })
+  @ApiProperty({
+    example: '',
+    description: 'VAT registration number (optional)',
+  })
   @IsString()
   vat_register_no: string;
 

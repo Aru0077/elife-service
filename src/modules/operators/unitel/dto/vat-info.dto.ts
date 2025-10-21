@@ -48,7 +48,9 @@ export class VatInfoDto {
   @ApiProperty({ example: '2025-10-18 10:26:26' })
   date: string;
 
-  @ApiProperty({ example: '584A0C34215E61DB745EFFA5D21E23CA3896A7832EB7263722C0DE' })
+  @ApiProperty({
+    example: '584A0C34215E61DB745EFFA5D21E23CA3896A7832EB7263722C0DE',
+  })
   internalCode: string;
 
   @ApiProperty({ example: 'KX 74016742' })
