@@ -21,6 +21,25 @@ import {
 import { UnitelResponseCode } from '@/modules/operators/unitel/enums/unitel.enum';
 
 /**
+ * Axios 错误响应类型
+ */
+interface AxiosErrorResponse {
+  status: number;
+  data: {
+    msg?: string;
+    [key: string]: unknown;
+  };
+}
+
+/**
+ * 带响应的 Axios 错误类型
+ */
+interface AxiosErrorWithResponse extends Error {
+  response?: AxiosErrorResponse;
+  code?: string;
+}
+
+/**
  * Unitel 第三方 API 服务
  * 职责: 封装 Unitel API 调用,提供给业务模块使用
  * 包含 Token 管理和所有 API 调用方法
@@ -202,8 +221,12 @@ export class UnitelService {
       this.logger.log(`新 Token 已缓存到 Redis,TTL: ${tokenTTL}秒`);
 
       return token;
-    } catch (error: any) {
-      this.logger.error('获取 Unitel Token 失败', error.message);
+    } catch (error) {
+      const err = error as AxiosErrorWithResponse;
+      this.logger.error(
+        '获取 Unitel Token 失败',
+        err.message || 'Unknown error',
+      );
       throw new HttpException('Unitel API 认证失败', HttpStatus.UNAUTHORIZED);
     }
   }
@@ -212,7 +235,7 @@ export class UnitelService {
 
   /**
    * 统一的 API 请求方法
-   * 自动处理 401 错误和 Token 刷新
+   * 使用 Bearer Token 认证,自动处理 401 错误和 Token 刷新
    * @private
    */
   private async request<T>(
@@ -220,15 +243,13 @@ export class UnitelService {
     data: any,
     retryCount = 0,
   ): Promise<T> {
-    const username = this.configService.get<string>('unitel.username');
-    const password = this.configService.get<string>('unitel.password');
     const baseUrl = this.configService.get<string>('unitel.baseUrl');
     const timeout = this.configService.get<number>('unitel.timeout');
     const maxRetries =
       this.configService.get<number>('unitel.retryAttempts') || 3;
 
-    // 生成 Basic Auth
-    const basicAuth = Buffer.from(`${username}:${password}`).toString('base64');
+    // 获取 Bearer Token
+    const token = await this.getToken();
     const url = `${baseUrl}${endpoint}`;
 
     try {
@@ -236,7 +257,7 @@ export class UnitelService {
         this.httpService
           .post<T>(url, data, {
             headers: {
-              Authorization: `Basic ${basicAuth}`,
+              Authorization: `Bearer ${token}`,
             },
             timeout,
           })
@@ -248,7 +269,7 @@ export class UnitelService {
       );
 
       // 检查响应体中的 result 字段是否为 401
-      const responseData = response.data as any;
+      const responseData = response.data as { result?: string };
       if (
         responseData.result === UnitelResponseCode.UNAUTHORIZED &&
         retryCount < maxRetries
@@ -259,16 +280,18 @@ export class UnitelService {
       }
 
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as AxiosErrorWithResponse;
+
       // 处理 HTTP 401 错误
-      if (error.response?.status === 401 && retryCount < maxRetries) {
+      if (err.response?.status === 401 && retryCount < maxRetries) {
         this.logger.warn('HTTP 401 错误,清除 Token 并重试...');
         await this.clearToken();
         return this.request<T>(endpoint, data, retryCount + 1);
       }
 
       // 其他错误
-      this.handleError(error);
+      this.handleError(err);
       throw error;
     }
   }
@@ -277,7 +300,7 @@ export class UnitelService {
    * 统一错误处理
    * @private
    */
-  private handleError(error: any): void {
+  private handleError(error: AxiosErrorWithResponse): void {
     if (error.response) {
       const status = error.response.status;
       const data = error.response.data;
@@ -293,7 +316,7 @@ export class UnitelService {
         );
       } else {
         throw new HttpException(
-          data?.msg || 'Unitel API 请求失败',
+          data.msg || 'Unitel API 请求失败',
           HttpStatus.BAD_REQUEST,
         );
       }
@@ -301,7 +324,7 @@ export class UnitelService {
       this.logger.error('请求超时');
       throw new HttpException('请求超时', HttpStatus.REQUEST_TIMEOUT);
     } else {
-      this.logger.error('未知错误', error);
+      this.logger.error('未知错误', error.message || String(error));
       throw new HttpException(
         '内部服务器错误',
         HttpStatus.INTERNAL_SERVER_ERROR,

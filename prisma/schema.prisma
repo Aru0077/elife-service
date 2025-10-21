@@ -12,3 +12,87 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ========== 共享表 ==========
+
+/// 用户表（微信用户）
+model User {
+  id        String   @id @default(uuid())
+  openid    String   @unique
+  nickname  String?
+  avatar    String?
+  phone     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关联关系
+  unitelOrders UnitelOrder[]
+
+  @@map("users")
+}
+
+/// 管理员表
+model Admin {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  email     String?
+  role      String   @default("admin")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("admins")
+}
+
+// ========== Unitel 运营商表 ==========
+
+/// Unitel订单表
+model UnitelOrder {
+  id String @id @default(uuid())
+
+  // 用户信息
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  // 订单基本信息
+  orderNo     String   @unique @map("order_no") /// 订单号
+  msisdn      String /// 手机号码
+  orderType   String   @map("order_type") /// 订单类型: balance(话费) | data(流量) | invoice_payment(账单支付)
+  amount      Decimal  @db.Decimal(10, 2) /// 订单金额
+  status      String /// 订单状态: pending | processing | success | failed | refunded
+  description String? /// 订单描述
+
+  // Unitel API 特有字段
+  packageCode String? @map("package_code") /// 套餐代码 (充值话费的card或流量的package)
+  svId        String? @map("sv_id") /// Unitel服务ID
+  seq         String? /// Unitel序列号
+  method      String? /// 支付方式
+
+  // VAT 发票信息 (JSON存储)
+  vatFlag       String? @map("vat_flag") /// VAT标志 1=开发票, 0=不开
+  vatRegisterNo String? @map("vat_register_no") /// VAT注册号
+  vatInfo       Json?   @map("vat_info") /// 完整的VAT发票信息
+
+  // API 响应信息
+  apiResult String? @map("api_result") /// API返回的result字段
+  apiCode   String? @map("api_code") /// API返回的code字段
+  apiMsg    String? @map("api_msg") /// API返回的msg字段
+  apiRaw    Json?   @map("api_raw") /// 完整的API响应(用于调试)
+
+  // 错误信息
+  errorMessage String? @map("error_message") /// 错误消息
+  errorCode    String? @map("error_code") /// 错误代码
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  paidAt    DateTime? @map("paid_at") /// 支付时间
+  completedAt DateTime? @map("completed_at") /// 完成时间
+
+  @@index([userId])
+  @@index([orderNo])
+  @@index([msisdn])
+  @@index([status])
+  @@index([createdAt])
+  @@map("unitel_orders")
+}

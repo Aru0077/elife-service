@@ -3,6 +3,7 @@ import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 import unitelConfig from '@/modules/operators/unitel/config/unitel.config';
 import { UnitelService } from '@/modules/operators/unitel/unitel.service';
+import { UnitelOrderService } from '@/modules/operators/unitel/services/unitel-order.service';
 
 /**
  * Unitel 运营商模块
@@ -17,7 +18,7 @@ import { UnitelService } from '@/modules/operators/unitel/unitel.service';
       maxRedirects: 5,
     }),
   ],
-  providers: [UnitelService],
-  exports: [UnitelService],
+  providers: [UnitelService, UnitelOrderService],
+  exports: [UnitelService, UnitelOrderService],
 })
 export class UnitelModule {}
