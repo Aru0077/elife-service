@@ -17,17 +17,24 @@ datasource db {
 
 /// 用户表（微信用户）
 model User {
-  id        String   @id @default(uuid())
-  openid    String   @unique
-  nickname  String?
-  avatar    String?
-  phone     String?
+  id       String  @id @default(uuid())
+  openid   String  @unique /// 微信 openid
+  nickname String? /// 微信昵称
+  avatar   String? /// 微信头像
+  phone    String? /// 手机号
+
+  // 黑名单功能
+  isBlacklisted   Boolean   @default(false) @map("is_blacklisted") /// 是否拉黑
+  blacklistedAt   DateTime? @map("blacklisted_at") /// 拉黑时间
+  blacklistReason String?   @map("blacklist_reason") /// 拉黑原因
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // 关联关系
   unitelOrders UnitelOrder[]
 
+  @@index([isBlacklisted])
   @@map("users")
 }
 
@@ -55,18 +62,31 @@ model UnitelOrder {
   user   User   @relation(fields: [userId], references: [id])
 
   // 订单基本信息
-  orderNo     String   @unique @map("order_no") /// 订单号
-  msisdn      String /// 手机号码
-  orderType   String   @map("order_type") /// 订单类型: balance(话费) | data(流量) | invoice_payment(账单支付)
-  amount      Decimal  @db.Decimal(10, 2) /// 订单金额
-  status      String /// 订单状态: pending | processing | success | failed | refunded
-  description String? /// 订单描述
+  orderNo   String @unique @map("order_no") /// 订单号
+  msisdn    String /// 手机号码
+  orderType String @map("order_type") /// 订单类型: balance(话费) | data(流量) | invoice_payment(账单支付)
+
+  // 金额信息（双币种）
+  amountMnt    Decimal  @map("amount_mnt") @db.Decimal(10, 2) /// 蒙古国货币金额(MNT)
+  amountCny    Decimal  @map("amount_cny") @db.Decimal(10, 2) /// 人民币金额(CNY)
+  exchangeRate Decimal? @map("exchange_rate") @db.Decimal(10, 4) /// 汇率快照
+
+  // 产品信息（资费列表字段）
+  packageCode    String  @map("package_code") /// 套餐代码
+  productName    String  @map("product_name") /// 套餐名称（蒙古语）
+  productEngName String  @map("product_eng_name") /// 套餐英文名称
+  productUnit    Int?    @map("product_unit") /// 话费单位
+  productData    String? @map("product_data") /// 流量大小（如"3GB"）
+  productDays    Int?    @map("product_days") /// 有效期天数
+
+  // 状态管理
+  paymentStatus  String @map("payment_status") /// 支付状态: unpaid | paid | refunded
+  rechargeStatus String @map("recharge_status") /// 充值状态: pending | processing | success | failed
 
   // Unitel API 特有字段
-  packageCode String? @map("package_code") /// 套餐代码 (充值话费的card或流量的package)
-  svId        String? @map("sv_id") /// Unitel服务ID
-  seq         String? /// Unitel序列号
-  method      String? /// 支付方式
+  svId   String? @map("sv_id") /// Unitel服务ID
+  seq    String? /// Unitel序列号
+  method String? /// 支付方式
 
   // VAT 发票信息 (JSON存储)
   vatFlag       String? @map("vat_flag") /// VAT标志 1=开发票, 0=不开
@@ -84,15 +104,17 @@ model UnitelOrder {
   errorCode    String? @map("error_code") /// 错误代码
 
   // 时间戳
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  paidAt    DateTime? @map("paid_at") /// 支付时间
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  paidAt      DateTime? @map("paid_at") /// 支付时间
   completedAt DateTime? @map("completed_at") /// 完成时间
 
   @@index([userId])
   @@index([orderNo])
   @@index([msisdn])
-  @@index([status])
+  @@index([paymentStatus])
+  @@index([rechargeStatus])
+  @@index([orderType])
   @@index([createdAt])
   @@map("unitel_orders")
 }
