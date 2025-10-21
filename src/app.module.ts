@@ -7,6 +7,7 @@ import { PrismaModule } from '@/prisma/prisma.module';
 import { RedisModule } from '@/redis/redis.module';
 import { HealthModule } from '@/health/health.module';
 import { ThrottlerBehindProxyGuard } from '@/common/guards/throttler-behind-proxy.guard';
+import { ExchangeRateModule } from '@/modules/exchange-rate';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ThrottlerBehindProxyGuard } from '@/common/guards/throttler-behind-prox
     PrismaModule,
     RedisModule,
     HealthModule,
+    ExchangeRateModule,
   ],
   providers: [
     {

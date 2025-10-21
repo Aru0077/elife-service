@@ -17,16 +17,7 @@ datasource db {
 
 /// 用户表（微信用户）
 model User {
-  id       String  @id @default(uuid())
-  openid   String  @unique /// 微信 openid
-  nickname String? /// 微信昵称
-  avatar   String? /// 微信头像
-  phone    String? /// 手机号
-
-  // 黑名单功能
-  isBlacklisted   Boolean   @default(false) @map("is_blacklisted") /// 是否拉黑
-  blacklistedAt   DateTime? @map("blacklisted_at") /// 拉黑时间
-  blacklistReason String?   @map("blacklist_reason") /// 拉黑原因
+  openid String @id /// 微信 openid
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -34,7 +25,6 @@ model User {
   // 关联关系
   unitelOrders UnitelOrder[]
 
-  @@index([isBlacklisted])
   @@map("users")
 }
 
@@ -51,18 +41,29 @@ model Admin {
   @@map("admins")
 }
 
+/// 汇率表
+model ExchangeRate {
+  id           String   @id @default("MNT_CNY") /// 固定ID
+  currencyFrom String   @map("currency_from") /// 源货币代码 (MNT)
+  currencyTo   String   @map("currency_to") /// 目标货币代码 (CNY)
+  rate         Decimal  @db.Decimal(10, 4) /// 汇率值 (440)
+  description  String? /// 描述信息
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("exchange_rates")
+}
+
 // ========== Unitel 运营商表 ==========
 
 /// Unitel订单表
 model UnitelOrder {
-  id String @id @default(uuid())
+  // 订单基本信息
+  orderNo String @id @map("order_no") /// 订单号
 
   // 用户信息
-  userId String @map("user_id")
-  user   User   @relation(fields: [userId], references: [id])
-
-  // 订单基本信息
-  orderNo   String @unique @map("order_no") /// 订单号
+  openid String
+  user   User   @relation(fields: [openid], references: [openid])
   msisdn    String /// 手机号码
   orderType String @map("order_type") /// 订单类型: balance(话费) | data(流量) | invoice_payment(账单支付)
 
@@ -109,8 +110,7 @@ model UnitelOrder {
   paidAt      DateTime? @map("paid_at") /// 支付时间
   completedAt DateTime? @map("completed_at") /// 完成时间
 
-  @@index([userId])
-  @@index([orderNo])
+  @@index([openid])
   @@index([msisdn])
   @@index([paymentStatus])
   @@index([rechargeStatus])
