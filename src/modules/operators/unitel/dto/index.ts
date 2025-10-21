@@ -1,29 +1,14 @@
-// Auth
-export * from './auth-response.dto';
+// 认证
+export * from './auth.dto';
 
-// Service Type
-export * from './service-type-request.dto';
-export * from './service-type-response.dto';
+// 资费列表
+export * from './service.dto';
 
-// Invoice
-export * from './invoice-request.dto';
-export * from './invoice-response.dto';
+// 充值（话费、流量、共享类型）
+export * from './recharge.dto';
 
-// Recharge
-export * from './transaction.dto';
-export * from './recharge-request.dto';
-export * from './recharge-response.dto';
+// 后付费账单
+export * from './invoice.dto';
 
-// Data Package
-export * from './data-package-request.dto';
-export * from './data-package-response.dto';
-
-// Payment
-export * from './payment-request.dto';
-export * from './payment-response.dto';
-
-// VAT
-export * from './vat-info.dto';
-
-// Error
-export * from './error-response.dto';
+// 支付账单
+export * from './payment.dto';

@@ -1,2 +1,2 @@
-export * from './unitel-auth.service';
+export * from './unitel-token.service';
 export * from './unitel-api.service';

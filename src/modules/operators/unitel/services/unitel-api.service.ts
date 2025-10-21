@@ -1,313 +1,222 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom, catchError } from 'rxjs';
 import { AxiosError } from 'axios';
-import { UNITEL_CONFIG } from '../config/unitel.config';
-import { UnitelAuthService } from './unitel-auth.service';
+import { UNITEL_ENDPOINTS } from '../config/unitel.config';
+import { UnitelTokenService } from './unitel-token.service';
 import {
-  ServiceTypeRequestDto,
+  GetServiceTypeRequestDto,
   ServiceTypeResponseDto,
-  InvoiceRequestDto,
+  GetInvoiceRequestDto,
   InvoiceResponseDto,
-  RechargeRequestDto,
-  RechargeResponseDto,
-  DataPackageRequestDto,
-  DataPackageResponseDto,
-  PaymentRequestDto,
-  PaymentResponseDto,
-  UnitelErrorResponseDto,
+  RechargeBalanceRequestDto,
+  RechargeBalanceResponseDto,
+  RechargeDataRequestDto,
+  RechargeDataResponseDto,
+  PayInvoiceRequestDto,
+  PayInvoiceResponseDto,
 } from '../dto';
+import { UnitelResponseCode } from '../enums/unitel.enum';
 
+/**
+ * Unitel API 服务
+ * 提供所有 Unitel API 调用方法
+ */
 @Injectable()
 export class UnitelApiService {
   private readonly logger = new Logger(UnitelApiService.name);
 
   constructor(
     private readonly httpService: HttpService,
-    private readonly authService: UnitelAuthService,
+    private readonly tokenService: UnitelTokenService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
-   * Get service type and price list for a phone number
-   * Returns complete cards (balance) and data (data packages) information
+   * 获取资费列表
+   * 返回完整的话费和流量套餐信息
    */
   async getServiceType(
-    dto: ServiceTypeRequestDto,
-    username: string,
-    password: string,
+    dto: GetServiceTypeRequestDto,
   ): Promise<ServiceTypeResponseDto> {
-    const token = await this.authService.getValidToken(username, password);
-    const url = `${UNITEL_CONFIG.baseUrl}/service/servicetype`;
+    const response = await this.request<ServiceTypeResponseDto>(
+      UNITEL_ENDPOINTS.SERVICE_TYPE,
+      dto,
+    );
 
-    try {
-      const response =
-        await this.makeAuthenticatedRequest<ServiceTypeResponseDto>(
-          url,
-          dto,
-          token,
-          username,
-          password,
-        );
+    this.logger.debug(
+      `获取资费列表成功 - MSISDN: ${dto.msisdn}, 类型: ${response.servicetype}`,
+    );
 
-      this.logger.debug(
-        `Retrieved service type for MSISDN: ${dto.msisdn}, type: ${response.servicetype}`,
-      );
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to get service type for ${dto.msisdn}`, error);
-      throw error;
-    }
+    return response;
   }
 
   /**
-   * Get postpaid invoice/bill information
-   * Works for any Unitel number (prepaid/postpaid), some fields may be empty
+   * 获取后付费账单
+   * 所有号码都可调用，预付费号码部分字段可能为空
    */
-  async getInvoice(
-    dto: InvoiceRequestDto,
-    username: string,
-    password: string,
-  ): Promise<InvoiceResponseDto> {
-    const token = await this.authService.getValidToken(username, password);
-    const url = `${UNITEL_CONFIG.baseUrl}/service/unitel`;
+  async getInvoice(dto: GetInvoiceRequestDto): Promise<InvoiceResponseDto> {
+    const response = await this.request<InvoiceResponseDto>(
+      UNITEL_ENDPOINTS.INVOICE,
+      dto,
+    );
 
-    try {
-      const response = await this.makeAuthenticatedRequest<InvoiceResponseDto>(
-        url,
-        dto,
-        token,
-        username,
-        password,
-      );
+    this.logger.debug(
+      `获取账单成功 - MSISDN: ${dto.msisdn}, 状态: ${response.invoice_status}`,
+    );
 
-      this.logger.debug(
-        `Retrieved invoice for MSISDN: ${dto.msisdn}, status: ${response.invoice_status}`,
-      );
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to get invoice for ${dto.msisdn}`, error);
-      throw error;
-    }
+    return response;
   }
 
   /**
-   * Recharge balance using card code
-   * Returns response with complete VAT information
+   * 充值话费
+   * 返回包含完整 VAT 发票信息的响应
    */
   async rechargeBalance(
-    dto: RechargeRequestDto,
-    username: string,
-    password: string,
-  ): Promise<RechargeResponseDto> {
-    const token = await this.authService.getValidToken(username, password);
-    const url = `${UNITEL_CONFIG.baseUrl}/service/recharge`;
+    dto: RechargeBalanceRequestDto,
+  ): Promise<RechargeBalanceResponseDto> {
+    const response = await this.request<RechargeBalanceResponseDto>(
+      UNITEL_ENDPOINTS.RECHARGE,
+      dto,
+    );
 
-    try {
-      const response = await this.makeAuthenticatedRequest<RechargeResponseDto>(
-        url,
-        dto,
-        token,
-        username,
-        password,
-      );
+    this.logger.log(
+      `充值话费成功 - MSISDN: ${dto.msisdn}, 套餐: ${dto.card}, SV_ID: ${response.sv_id}`,
+    );
 
-      this.logger.debug(
-        `Balance recharged for MSISDN: ${dto.msisdn}, card: ${dto.card}, sv_id: ${response.sv_id}`,
-      );
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to recharge balance for ${dto.msisdn}`, error);
-      throw error;
-    }
+    return response;
   }
 
   /**
-   * Recharge data package
-   * Returns response with complete VAT information
+   * 充值流量
+   * 返回包含完整 VAT 发票信息的响应
    */
-  async rechargeDataPackage(
-    dto: DataPackageRequestDto,
-    username: string,
-    password: string,
-  ): Promise<DataPackageResponseDto> {
-    const token = await this.authService.getValidToken(username, password);
-    const url = `${UNITEL_CONFIG.baseUrl}/service/datapackage`;
+  async rechargeData(
+    dto: RechargeDataRequestDto,
+  ): Promise<RechargeDataResponseDto> {
+    const response = await this.request<RechargeDataResponseDto>(
+      UNITEL_ENDPOINTS.DATA_PACKAGE,
+      dto,
+    );
 
-    try {
-      const response =
-        await this.makeAuthenticatedRequest<DataPackageResponseDto>(
-          url,
-          dto,
-          token,
-          username,
-          password,
-        );
+    this.logger.log(
+      `充值流量成功 - MSISDN: ${dto.msisdn}, 套餐: ${dto.package}, SEQ: ${response.seq}`,
+    );
 
-      this.logger.debug(
-        `Data package recharged for MSISDN: ${dto.msisdn}, package: ${dto.package}, seq: ${response.seq}`,
-      );
-      return response;
-    } catch (error) {
-      this.logger.error(
-        `Failed to recharge data package for ${dto.msisdn}`,
-        error,
-      );
-      throw error;
-    }
+    return response;
   }
 
   /**
-   * Pay postpaid invoice/bill
-   * Note: Response format is unknown as per documentation
+   * 支付后付费账单
+   * 注意：响应格式未知
    */
   async payInvoice(
-    dto: PaymentRequestDto,
-    username: string,
-    password: string,
-  ): Promise<PaymentResponseDto> {
-    const token = await this.authService.getValidToken(username, password);
-    const url = `${UNITEL_CONFIG.baseUrl}/service/payment`;
+    dto: PayInvoiceRequestDto,
+  ): Promise<PayInvoiceResponseDto> {
+    const response = await this.request<PayInvoiceResponseDto>(
+      UNITEL_ENDPOINTS.PAYMENT,
+      dto,
+    );
 
-    try {
-      const response = await this.makeAuthenticatedRequest<PaymentResponseDto>(
-        url,
-        dto,
-        token,
-        username,
-        password,
-      );
+    this.logger.log(`支付账单成功 - MSISDN: ${dto.msisdn}, 金额: ${dto.amount}`);
 
-      this.logger.debug(
-        `Invoice paid for MSISDN: ${dto.msisdn}, amount: ${dto.amount}`,
-      );
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to pay invoice for ${dto.msisdn}`, error);
-      throw error;
-    }
+    return response;
   }
 
   /**
-   * Make authenticated request to Unitel API with automatic retry on 401
+   * 统一的 API 请求方法
+   * 自动处理 401 错误和 Token 刷新
+   * @private
    */
-  private async makeAuthenticatedRequest<T>(
-    url: string,
+  private async request<T>(
+    endpoint: string,
     data: any,
-    token: string,
-    username: string,
-    password: string,
     retryCount = 0,
   ): Promise<T> {
+    const username = this.configService.get<string>('unitel.username');
+    const password = this.configService.get<string>('unitel.password');
+    const baseUrl = this.configService.get<string>('unitel.baseUrl');
+    const timeout = this.configService.get<number>('unitel.timeout');
+    const maxRetries = this.configService.get<number>('unitel.retryAttempts') || 3;
+
+    // 生成 Basic Auth
+    const basicAuth = Buffer.from(`${username}:${password}`).toString('base64');
+    const url = `${baseUrl}${endpoint}`;
+
     try {
       const response = await firstValueFrom(
         this.httpService
           .post<T>(url, data, {
             headers: {
-              Authorization: `Basic ${this.generateBasicAuth(username, password)}`,
+              Authorization: `Basic ${basicAuth}`,
             },
-            timeout: UNITEL_CONFIG.timeout,
+            timeout,
           })
           .pipe(
-            catchError((error: AxiosError<UnitelErrorResponseDto>) => {
+            catchError((error: AxiosError) => {
               throw error;
             }),
           ),
       );
 
-      // Check if response indicates error
+      // 检查响应体中的 result 字段是否为 401
       const responseData = response.data as any;
       if (
-        responseData.result === '401' &&
-        retryCount < UNITEL_CONFIG.retryAttempts
+        responseData.result === UnitelResponseCode.UNAUTHORIZED &&
+        retryCount < maxRetries
       ) {
-        this.logger.warn('Received 401 error, clearing token and retrying...');
-        this.authService.clearToken();
-
-        // Retry with new token
-        const newToken = await this.authService.getValidToken(
-          username,
-          password,
-        );
-        return this.makeAuthenticatedRequest(
-          url,
-          data,
-          newToken,
-          username,
-          password,
-          retryCount + 1,
-        );
+        this.logger.warn('响应返回 401，清除 Token 并重试...');
+        await this.tokenService.clearToken();
+        return this.request<T>(endpoint, data, retryCount + 1);
       }
 
       return response.data;
     } catch (error: any) {
-      if (
-        error.response?.status === 401 &&
-        retryCount < UNITEL_CONFIG.retryAttempts
-      ) {
-        this.logger.warn('Received HTTP 401, clearing token and retrying...');
-        this.authService.clearToken();
-
-        // Retry with new token
-        const newToken = await this.authService.getValidToken(
-          username,
-          password,
-        );
-        return this.makeAuthenticatedRequest(
-          url,
-          data,
-          newToken,
-          username,
-          password,
-          retryCount + 1,
-        );
+      // 处理 HTTP 401 错误
+      if (error.response?.status === 401 && retryCount < maxRetries) {
+        this.logger.warn('HTTP 401 错误，清除 Token 并重试...');
+        await this.tokenService.clearToken();
+        return this.request<T>(endpoint, data, retryCount + 1);
       }
 
-      // Handle other errors
+      // 其他错误
       this.handleError(error);
       throw error;
     }
   }
 
   /**
-   * Generate Basic Auth header value
-   */
-  private generateBasicAuth(username: string, password: string): string {
-    const credentials = `${username}:${password}`;
-    return Buffer.from(credentials).toString('base64');
-  }
-
-  /**
-   * Handle API errors
+   * 统一错误处理
+   * @private
    */
   private handleError(error: any): void {
     if (error.response) {
       const status = error.response.status;
       const data = error.response.data;
 
-      this.logger.error(
-        `Unitel API error: ${status} - ${JSON.stringify(data)}`,
-      );
+      this.logger.error(`Unitel API 错误: ${status} - ${JSON.stringify(data)}`);
 
       if (status === 401) {
-        throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+        throw new HttpException('Unitel API 未授权', HttpStatus.UNAUTHORIZED);
       } else if (status >= 500) {
         throw new HttpException(
-          'Unitel API service unavailable',
+          'Unitel API 服务不可用',
           HttpStatus.SERVICE_UNAVAILABLE,
         );
       } else {
         throw new HttpException(
-          data?.msg || 'Unitel API request failed',
+          data?.msg || 'Unitel API 请求失败',
           HttpStatus.BAD_REQUEST,
         );
       }
     } else if (error.code === 'ECONNABORTED') {
-      this.logger.error('Request timeout');
-      throw new HttpException('Request timeout', HttpStatus.REQUEST_TIMEOUT);
+      this.logger.error('请求超时');
+      throw new HttpException('请求超时', HttpStatus.REQUEST_TIMEOUT);
     } else {
-      this.logger.error('Unknown error', error);
+      this.logger.error('未知错误', error);
       throw new HttpException(
-        'Internal server error',
+        '内部服务器错误',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
