@@ -29,10 +29,16 @@ export class CardItemDto {
   @ApiProperty({ example: 5, required: false, description: '有效天数' })
   days?: number;
 
-  @ApiProperty({ example: '1000 unit, 3GB data, 5 days', description: '英文名称' })
+  @ApiProperty({
+    example: '1000 unit, 3GB data, 5 days',
+    description: '英文名称',
+  })
   eng_name: string;
 
-  @ApiProperty({ example: '1000 нэгж (Data 3gb/5 хоног)', description: '套餐名称' })
+  @ApiProperty({
+    example: '1000 нэгж (Data 3gb/5 хоног)',
+    description: '套餐名称',
+  })
   name: string;
 
   @ApiProperty({ example: 5000, description: '价格' })

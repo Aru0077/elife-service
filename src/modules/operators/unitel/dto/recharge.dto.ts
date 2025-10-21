@@ -63,7 +63,10 @@ export class VatStockDto {
  * VAT 发票信息（完整）
  */
 export class VatInfoDto {
-  @ApiProperty({ example: '000005036895100251018738410751059', description: '发票ID' })
+  @ApiProperty({
+    example: '000005036895100251018738410751059',
+    description: '发票ID',
+  })
   billId: string;
 
   @ApiProperty({ example: '3000.00', description: '总金额' })
@@ -217,7 +220,11 @@ export class RechargeDataResponseDto {
   @ApiProperty({ example: 'success', description: '消息' })
   msg: string;
 
-  @ApiProperty({ example: null, nullable: true, description: '服务ID（可能为null）' })
+  @ApiProperty({
+    example: null,
+    nullable: true,
+    description: '服务ID（可能为null）',
+  })
   sv_id: string | null;
 
   @ApiProperty({ example: 'cash', description: '支付方式' })

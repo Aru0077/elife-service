@@ -25,7 +25,9 @@ export class UnitelTokenService {
    * 优先从 Redis 获取，不存在时调用 API 获取
    */
   async getToken(): Promise<string> {
-    const tokenKey = this.configService.get<string>('unitel.tokenKey') || 'unitel:access_token';
+    const tokenKey =
+      this.configService.get<string>('unitel.tokenKey') ||
+      'unitel:access_token';
 
     // 1. 尝试从 Redis 获取
     const cachedToken = await this.redis.get(tokenKey);
@@ -43,7 +45,9 @@ export class UnitelTokenService {
    * 清除 Token（当收到 401 错误时调用）
    */
   async clearToken(): Promise<void> {
-    const tokenKey = this.configService.get<string>('unitel.tokenKey') || 'unitel:access_token';
+    const tokenKey =
+      this.configService.get<string>('unitel.tokenKey') ||
+      'unitel:access_token';
     await this.redis.del(tokenKey);
     this.logger.warn('已清除 Redis 中的 Token');
   }
@@ -56,7 +60,9 @@ export class UnitelTokenService {
     const username = this.configService.get<string>('unitel.username');
     const password = this.configService.get<string>('unitel.password');
     const baseUrl = this.configService.get<string>('unitel.baseUrl');
-    const tokenKey = this.configService.get<string>('unitel.tokenKey') || 'unitel:access_token';
+    const tokenKey =
+      this.configService.get<string>('unitel.tokenKey') ||
+      'unitel:access_token';
     const tokenTTL = this.configService.get<number>('unitel.tokenTTL') || 3600;
 
     // 生成 Basic Auth
@@ -86,10 +92,7 @@ export class UnitelTokenService {
       return token;
     } catch (error: any) {
       this.logger.error('获取 Unitel Token 失败', error.message);
-      throw new HttpException(
-        'Unitel API 认证失败',
-        HttpStatus.UNAUTHORIZED,
-      );
+      throw new HttpException('Unitel API 认证失败', HttpStatus.UNAUTHORIZED);
     }
   }
 }

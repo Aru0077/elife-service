@@ -111,15 +111,15 @@ export class UnitelApiService {
    * 支付后付费账单
    * 注意：响应格式未知
    */
-  async payInvoice(
-    dto: PayInvoiceRequestDto,
-  ): Promise<PayInvoiceResponseDto> {
+  async payInvoice(dto: PayInvoiceRequestDto): Promise<PayInvoiceResponseDto> {
     const response = await this.request<PayInvoiceResponseDto>(
       UNITEL_ENDPOINTS.PAYMENT,
       dto,
     );
 
-    this.logger.log(`支付账单成功 - MSISDN: ${dto.msisdn}, 金额: ${dto.amount}`);
+    this.logger.log(
+      `支付账单成功 - MSISDN: ${dto.msisdn}, 金额: ${dto.amount}`,
+    );
 
     return response;
   }
@@ -138,7 +138,8 @@ export class UnitelApiService {
     const password = this.configService.get<string>('unitel.password');
     const baseUrl = this.configService.get<string>('unitel.baseUrl');
     const timeout = this.configService.get<number>('unitel.timeout');
-    const maxRetries = this.configService.get<number>('unitel.retryAttempts') || 3;
+    const maxRetries =
+      this.configService.get<number>('unitel.retryAttempts') || 3;
 
     // 生成 Basic Auth
     const basicAuth = Buffer.from(`${username}:${password}`).toString('base64');
