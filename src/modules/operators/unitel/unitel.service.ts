@@ -3,9 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom, catchError } from 'rxjs';
 import { AxiosError } from 'axios';
-import { UNITEL_ENDPOINTS } from '../config/unitel.config';
-import { UnitelTokenService } from './unitel-token.service';
+import { RedisService } from '@/redis/redis.service';
+import { UNITEL_ENDPOINTS } from '@/modules/operators/unitel/config/unitel.config';
 import {
+  UnitelTokenDto,
   GetServiceTypeRequestDto,
   ServiceTypeResponseDto,
   GetInvoiceRequestDto,
@@ -16,22 +17,25 @@ import {
   RechargeDataResponseDto,
   PayInvoiceRequestDto,
   PayInvoiceResponseDto,
-} from '../dto';
-import { UnitelResponseCode } from '../enums/unitel.enum';
+} from '@/modules/operators/unitel/dto';
+import { UnitelResponseCode } from '@/modules/operators/unitel/enums/unitel.enum';
 
 /**
- * Unitel API 服务
- * 提供所有 Unitel API 调用方法
+ * Unitel 第三方 API 服务
+ * 职责: 封装 Unitel API 调用,提供给业务模块使用
+ * 包含 Token 管理和所有 API 调用方法
  */
 @Injectable()
-export class UnitelApiService {
-  private readonly logger = new Logger(UnitelApiService.name);
+export class UnitelService {
+  private readonly logger = new Logger(UnitelService.name);
 
   constructor(
+    private readonly redis: RedisService,
     private readonly httpService: HttpService,
-    private readonly tokenService: UnitelTokenService,
     private readonly configService: ConfigService,
   ) {}
+
+  // ========== 公共业务接口 ==========
 
   /**
    * 获取资费列表
@@ -54,7 +58,7 @@ export class UnitelApiService {
 
   /**
    * 获取后付费账单
-   * 所有号码都可调用，预付费号码部分字段可能为空
+   * 所有号码都可调用,预付费号码部分字段可能为空
    */
   async getInvoice(dto: GetInvoiceRequestDto): Promise<InvoiceResponseDto> {
     const response = await this.request<InvoiceResponseDto>(
@@ -109,7 +113,7 @@ export class UnitelApiService {
 
   /**
    * 支付后付费账单
-   * 注意：响应格式未知
+   * 注意:响应格式未知
    */
   async payInvoice(dto: PayInvoiceRequestDto): Promise<PayInvoiceResponseDto> {
     const response = await this.request<PayInvoiceResponseDto>(
@@ -123,6 +127,88 @@ export class UnitelApiService {
 
     return response;
   }
+
+  // ========== Token 管理 (私有方法) ==========
+
+  /**
+   * 获取有效的 Token
+   * 优先从 Redis 获取,不存在时调用 API 获取
+   * @private
+   */
+  private async getToken(): Promise<string> {
+    const tokenKey =
+      this.configService.get<string>('unitel.tokenKey') ||
+      'unitel:access_token';
+
+    // 1. 尝试从 Redis 获取
+    const cachedToken = await this.redis.get(tokenKey);
+    if (cachedToken) {
+      this.logger.debug('从 Redis 获取到缓存的 Token');
+      return cachedToken;
+    }
+
+    // 2. Redis 中没有,调用 API 获取
+    this.logger.debug('Redis 中无 Token,调用 API 获取新 Token');
+    return this.fetchAndCacheToken();
+  }
+
+  /**
+   * 清除 Token(当收到 401 错误时调用)
+   * @private
+   */
+  private async clearToken(): Promise<void> {
+    const tokenKey =
+      this.configService.get<string>('unitel.tokenKey') ||
+      'unitel:access_token';
+    await this.redis.del(tokenKey);
+    this.logger.warn('已清除 Redis 中的 Token');
+  }
+
+  /**
+   * 从 Unitel API 获取 Token 并缓存到 Redis
+   * @private
+   */
+  private async fetchAndCacheToken(): Promise<string> {
+    const username = this.configService.get<string>('unitel.username');
+    const password = this.configService.get<string>('unitel.password');
+    const baseUrl = this.configService.get<string>('unitel.baseUrl');
+    const tokenKey =
+      this.configService.get<string>('unitel.tokenKey') ||
+      'unitel:access_token';
+    const tokenTTL = this.configService.get<number>('unitel.tokenTTL') || 3600;
+
+    // 生成 Basic Auth
+    const basicAuth = Buffer.from(`${username}:${password}`).toString('base64');
+    const url = `${baseUrl}${UNITEL_ENDPOINTS.AUTH}`;
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post<UnitelTokenDto>(
+          url,
+          {}, // 空 body
+          {
+            headers: {
+              Authorization: `Basic ${basicAuth}`,
+            },
+            timeout: this.configService.get('unitel.timeout'),
+          },
+        ),
+      );
+
+      const token = response.data.access_token;
+
+      // 缓存到 Redis
+      await this.redis.set(tokenKey, token, tokenTTL);
+      this.logger.log(`新 Token 已缓存到 Redis,TTL: ${tokenTTL}秒`);
+
+      return token;
+    } catch (error: any) {
+      this.logger.error('获取 Unitel Token 失败', error.message);
+      throw new HttpException('Unitel API 认证失败', HttpStatus.UNAUTHORIZED);
+    }
+  }
+
+  // ========== 统一请求封装 (私有方法) ==========
 
   /**
    * 统一的 API 请求方法
@@ -167,8 +253,8 @@ export class UnitelApiService {
         responseData.result === UnitelResponseCode.UNAUTHORIZED &&
         retryCount < maxRetries
       ) {
-        this.logger.warn('响应返回 401，清除 Token 并重试...');
-        await this.tokenService.clearToken();
+        this.logger.warn('响应返回 401,清除 Token 并重试...');
+        await this.clearToken();
         return this.request<T>(endpoint, data, retryCount + 1);
       }
 
@@ -176,8 +262,8 @@ export class UnitelApiService {
     } catch (error: any) {
       // 处理 HTTP 401 错误
       if (error.response?.status === 401 && retryCount < maxRetries) {
-        this.logger.warn('HTTP 401 错误，清除 Token 并重试...');
-        await this.tokenService.clearToken();
+        this.logger.warn('HTTP 401 错误,清除 Token 并重试...');
+        await this.clearToken();
         return this.request<T>(endpoint, data, retryCount + 1);
       }
 

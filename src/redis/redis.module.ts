@@ -1,7 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import redisConfig from './redis.config';
-import { RedisService } from './redis.service';
+import redisConfig from '@/redis/redis.config';
+import { RedisService } from '@/redis/redis.service';
 
 /**
  * Redis 模块（全局模块）

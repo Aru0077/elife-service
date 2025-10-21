@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
-import unitelConfig from './config/unitel.config';
-import { UnitelTokenService } from './services/unitel-token.service';
-import { UnitelApiService } from './services/unitel-api.service';
+import unitelConfig from '@/modules/operators/unitel/config/unitel.config';
+import { UnitelService } from '@/modules/operators/unitel/unitel.service';
 
 /**
  * Unitel 运营商模块
@@ -18,7 +17,7 @@ import { UnitelApiService } from './services/unitel-api.service';
       maxRedirects: 5,
     }),
   ],
-  providers: [UnitelTokenService, UnitelApiService],
-  exports: [UnitelApiService, UnitelTokenService],
+  providers: [UnitelService],
+  exports: [UnitelService],
 })
 export class UnitelModule {}

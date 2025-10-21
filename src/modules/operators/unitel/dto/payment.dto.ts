@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { TransactionDto } from './recharge.dto';
+import { TransactionDto } from '@/modules/operators/unitel/dto/recharge.dto';
 
 /**
  * 支付后付费账单 - 请求

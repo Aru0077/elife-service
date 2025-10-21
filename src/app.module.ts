@@ -2,11 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { validationSchema } from './config/env.validation';
-import { PrismaModule } from './prisma/prisma.module';
-import { RedisModule } from './redis/redis.module';
-import { HealthModule } from './health/health.module';
-import { ThrottlerBehindProxyGuard } from './common/guards/throttler-behind-proxy.guard';
+import { validationSchema } from '@/config/env.validation';
+import { PrismaModule } from '@/prisma/prisma.module';
+import { RedisModule } from '@/redis/redis.module';
+import { HealthModule } from '@/health/health.module';
+import { ThrottlerBehindProxyGuard } from '@/common/guards/throttler-behind-proxy.guard';
 
 @Module({
   imports: [
