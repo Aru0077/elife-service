@@ -3,3 +3,4 @@
  */
 
 export * from './unitel-api.service';
+export * from './unitel-business.service';
