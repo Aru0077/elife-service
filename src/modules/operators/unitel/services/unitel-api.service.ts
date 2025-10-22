@@ -173,14 +173,10 @@ export class UnitelApiService {
    * @returns 资费列表（包含话费和流量套餐）
    */
   async getServiceType(msisdn: string): Promise<ServiceTypeResponse> {
-    return this.request<ServiceTypeResponse>(
-      'POST',
-      '/service/servicetype',
-      {
-        msisdn,
-        info: '1',
-      },
-    );
+    return this.request<ServiceTypeResponse>('POST', '/service/servicetype', {
+      msisdn,
+      info: '1',
+    });
   }
 
   /**
