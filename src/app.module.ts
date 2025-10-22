@@ -6,6 +6,7 @@ import { validationSchema } from '@/config/env.validation';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { RedisModule } from '@/redis/redis.module';
 import { HealthModule } from '@/health/health.module';
+import { LoggerModule } from '@/logger/logger.module';
 import { ThrottlerBehindProxyGuard } from '@/common/guards/throttler-behind-proxy.guard';
 import { ExchangeRateModule } from '@/modules/exchange-rate';
 import { UnitelModule } from '@/modules/operators/unitel/unitel.module';
@@ -28,6 +29,7 @@ import { UnitelModule } from '@/modules/operators/unitel/unitel.module';
         ],
       }),
     }),
+    LoggerModule, // 日志模块（全局）
     PrismaModule,
     RedisModule,
     HealthModule,

@@ -1,9 +1,13 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigType } from '@nestjs/config';
+import { AxiosError, AxiosResponse } from 'axios';
 import { firstValueFrom } from 'rxjs';
+import { PinoLogger } from 'nestjs-pino';
+import { randomUUID } from 'crypto';
 import unitelConfig from '../config/unitel.config';
 import { RedisService } from '@/redis/redis.service';
+import { ThirdPartyLoggerService } from '@/logger/services/third-party-logger.service';
 import {
   TokenResponse,
   ServiceTypeResponse,
@@ -21,18 +25,22 @@ import {
  * - Token 管理（被动刷新策略）
  * - HTTP 请求封装
  * - 401 自动重试
+ * - 完整的第三方 API 日志记录
  */
 @Injectable()
 export class UnitelApiService {
-  private readonly logger = new Logger(UnitelApiService.name);
   private readonly REDIS_TOKEN_KEY = 'unitel:access_token';
 
   constructor(
     private readonly httpService: HttpService,
     private readonly redisService: RedisService,
+    private readonly logger: PinoLogger,
+    private readonly thirdPartyLogger: ThirdPartyLoggerService,
     @Inject(unitelConfig.KEY)
     private readonly config: ConfigType<typeof unitelConfig>,
-  ) {}
+  ) {
+    this.logger.setContext(UnitelApiService.name);
+  }
 
   // ========== Token 管理 ==========
 
@@ -49,12 +57,12 @@ export class UnitelApiService {
     }
 
     // 2. 无缓存，调用 /auth 获取新 Token
-    this.logger.log('缓存中无 Token，正在获取新 Token...');
+    this.logger.info('缓存中无 Token，正在获取新 Token...');
     const token = await this.fetchNewToken();
 
     // 3. 保存到 Redis（无 TTL，依赖被动刷新）
     await this.redisService.set(this.REDIS_TOKEN_KEY, token);
-    this.logger.log('新 Token 已缓存到 Redis');
+    this.logger.info('新 Token 已缓存到 Redis');
 
     return token;
   }
@@ -85,11 +93,13 @@ export class UnitelApiService {
         ),
       );
 
-      this.logger.log('成功获取 Access Token');
+      this.logger.info('成功获取 Access Token');
       return response.data.access_token;
     } catch (error) {
-      this.logger.error('获取 Access Token 失败', error.message);
-      throw new Error(`Unitel 认证失败: ${error.message}`);
+      const errorMessage =
+        error instanceof AxiosError ? error.message : '未知错误';
+      this.logger.error('获取 Access Token 失败', errorMessage);
+      throw new Error(`Unitel 认证失败: ${errorMessage}`);
     }
   }
 
@@ -98,7 +108,7 @@ export class UnitelApiService {
    */
   private async clearTokenCache(): Promise<void> {
     await this.redisService.del(this.REDIS_TOKEN_KEY);
-    this.logger.log('已清除过期的 Token 缓存');
+    this.logger.info('已清除过期的 Token 缓存');
   }
 
   // ========== HTTP 请求封装 ==========
@@ -118,17 +128,21 @@ export class UnitelApiService {
     data?: any,
     retryOn401 = true,
   ): Promise<T> {
+    const traceId = randomUUID();
+    const url = `${this.config.baseUrl}${endpoint}`;
+    const startTime = Date.now();
+
     try {
       // 1. 获取 Token
       const token = await this.getAccessToken();
 
       // 2. 发起请求
-      this.logger.debug(`调用 Unitel API: ${method} ${endpoint}`);
-      const response = await firstValueFrom(
+      this.logger.debug(`[${traceId}] 调用 Unitel API: ${method} ${endpoint}`);
+      const response: AxiosResponse<T> = await firstValueFrom(
         this.httpService.request<T>({
           method,
-          url: `${this.config.baseUrl}${endpoint}`,
-          data,
+          url,
+          data: data as Record<string, unknown>,
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -137,12 +151,37 @@ export class UnitelApiService {
         }),
       );
 
-      this.logger.debug(`API 调用成功: ${endpoint}`);
+      // 3. 记录成功日志
+      const duration = Date.now() - startTime;
+      this.thirdPartyLogger.logApiSuccess({
+        traceId,
+        service: 'Unitel',
+        method,
+        url,
+        requestHeaders: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ***REDACTED***',
+        },
+        requestBody: data,
+        responseStatus: response.status,
+        responseHeaders: response.headers as Record<string, string>,
+        responseBody: response.data,
+        duration,
+        timestamp: new Date().toISOString(),
+      });
+
+      this.logger.debug(`[${traceId}] API 调用成功: ${endpoint} (${duration}ms)`);
       return response.data;
     } catch (error) {
+      const duration = Date.now() - startTime;
+
       // 3. 处理 401 错误（Token 过期）
-      if (error.response?.status === 401 && retryOn401) {
-        this.logger.warn('Token 已过期（401），正在刷新并重试...');
+      if (
+        error instanceof AxiosError &&
+        error.response?.status === 401 &&
+        retryOn401
+      ) {
+        this.logger.warn(`[${traceId}] Token 已过期（401），正在刷新并重试...`);
 
         // 清除缓存
         await this.clearTokenCache();
@@ -151,15 +190,32 @@ export class UnitelApiService {
         return this.request<T>(method, endpoint, data, false);
       }
 
-      // 4. 其他错误抛出
-      this.logger.error(
-        `Unitel API 调用失败: ${endpoint}`,
-        error.response?.data || error.message,
-      );
+      // 4. 记录错误日志
+      const errorMsg: string =
+        error instanceof AxiosError
+          ? (error.response?.data as { msg?: string })?.msg || error.message
+          : String(error);
 
-      throw new Error(
-        `Unitel API 错误: ${error.response?.data?.msg || error.message}`,
-      );
+      this.thirdPartyLogger.logApiError({
+        traceId,
+        service: 'Unitel',
+        method,
+        url,
+        requestHeaders: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ***REDACTED***',
+        },
+        requestBody: data,
+        responseStatus: error instanceof AxiosError ? error.response?.status : undefined,
+        responseBody: error instanceof AxiosError ? error.response?.data : undefined,
+        duration,
+        error: errorMsg,
+        timestamp: new Date().toISOString(),
+      });
+
+      this.logger.error(`[${traceId}] Unitel API 调用失败: ${endpoint}`, errorMsg);
+
+      throw new Error(`Unitel API 错误: ${errorMsg}`);
     }
   }
 

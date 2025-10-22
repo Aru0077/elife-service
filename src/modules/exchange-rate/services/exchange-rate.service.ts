@@ -14,7 +14,7 @@ export class ExchangeRateService {
    * 汇率固定为 440，换算公式: MNT / 440 = CNY
    */
   async getExchangeRate(): Promise<ExchangeRateResponseDto> {
-    const exchangeRate = await this.prisma.exchangeRate.findUnique({
+    const exchangeRate = await (this.prisma as any).exchangeRate.findUnique({
       where: { id: 'MNT_CNY' },
     });
 
@@ -23,10 +23,10 @@ export class ExchangeRateService {
     }
 
     return {
-      id: exchangeRate.id,
-      rate: exchangeRate.rate.toString(),
-      createdAt: exchangeRate.createdAt,
-      updatedAt: exchangeRate.updatedAt,
+      id: exchangeRate.id as string,
+      rate: (exchangeRate.rate as { toString(): string }).toString(),
+      createdAt: exchangeRate.createdAt as Date,
+      updatedAt: exchangeRate.updatedAt as Date,
     };
   }
 
