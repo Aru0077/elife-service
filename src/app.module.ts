@@ -8,6 +8,7 @@ import { RedisModule } from '@/redis/redis.module';
 import { HealthModule } from '@/health/health.module';
 import { ThrottlerBehindProxyGuard } from '@/common/guards/throttler-behind-proxy.guard';
 import { ExchangeRateModule } from '@/modules/exchange-rate';
+import { UnitelModule } from '@/modules/operators/unitel/unitel.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { ExchangeRateModule } from '@/modules/exchange-rate';
     RedisModule,
     HealthModule,
     ExchangeRateModule,
+    UnitelModule,
   ],
   providers: [
     {

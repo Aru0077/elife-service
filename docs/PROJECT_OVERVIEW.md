@@ -7,7 +7,7 @@
 - **前端**: 微信公众号网页（H5）
 - **后端**: elife-service（本项目）- 基于 NestJS 的 API 服务
 - **目标用户**: 微信用户
-- **主要功能**: Unitel 话费/流量充值、订单管理、微信支付集成
+- **主要功能**: Unitel 话费/流量充值、订单管理
 
 ---
 
@@ -29,53 +29,214 @@
 - `class-validator` + `class-transformer` - 数据验证
 - `helmet` - 安全中间件
 
-### 第三方集成
+### 第三方集成（计划中）
 - **Unitel API** - 蒙古国运营商 API
 - **微信支付** - 微信公众号支付
 - **微信网页授权** - 用户身份认证
 
 ---
 
-## 🔄 业务流程
+## 🏗️ 项目结构
 
-### 完整用户流程（7步）
+### 当前实现的模块
 
 ```
-1. 微信授权登录
-   ├─ 前端: 微信网页授权
-   └─ 后端: 处理授权回调，返回 JWT Token
-
-2. 获取资费列表
-   ├─ 前端: 输入手机号
-   ├─ 后端: 调用 Unitel API /service/servicetype
-   └─ 响应: 返回话费/流量套餐列表
-
-3. 汇率换算展示
-   ├─ 前端: 从数据库获取当前汇率（440）
-   ├─ 公式: 蒙古国货币(MNT) / 440 = 人民币(CNY)
-   └─ 展示: 仅显示人民币价格
-
-4. 创建订单
-   ├─ 前端: 用户选择套餐，确认订单
-   ├─ 后端: 创建订单记录（状态: unpaid）
-   └─ 响应: 返回订单号
-
-5. 发起支付
-   ├─ 前端: 跳转微信支付页面
-   ├─ 后端: 调用微信支付 API
-   └─ 微信: JSAPI 支付
-
-6. 支付回调
-   ├─ 微信: 异步通知后端支付结果
-   ├─ 后端: 更新订单状态（paid）
-   └─ 后端: 调用 Unitel API 进行充值
-
-7. 订单列表
-   ├─ 前端: 展示订单历史
-   └─ 后端: 查询用户订单（支持分页）
-
-注意: 当前不支持未支付订单的重新支付功能
+elife-service/
+├── src/
+│   ├── main.ts                  # 应用入口
+│   ├── app.module.ts            # 根模块
+│   │
+│   ├── config/                  # 全局配置
+│   │   └── env.validation.ts    # 环境变量验证
+│   │
+│   ├── common/                  # 共享组件
+│   │   ├── guards/              # 守卫（限流代理）
+│   │   ├── filters/             # 异常过滤器
+│   │   └── dto/                 # 共享 DTO
+│   │
+│   ├── prisma/                  # Prisma 模块
+│   │   ├── prisma.service.ts
+│   │   └── prisma.module.ts
+│   │
+│   ├── redis/                   # Redis 模块
+│   │   ├── redis.service.ts
+│   │   ├── redis.config.ts
+│   │   └── redis.module.ts
+│   │
+│   ├── health/                  # 健康检查模块
+│   │   ├── health.controller.ts
+│   │   └── health.module.ts
+│   │
+│   └── modules/                 # 业务模块
+│       │
+│       ├── exchange-rate/       # 汇率管理模块
+│       │   ├── services/
+│       │   ├── dto/
+│       │   ├── exchange-rate.controller.ts
+│       │   └── exchange-rate.module.ts
+│       │
+│       └── operators/           # 运营商模块（预留）
+│           ├── unitel/          # Unitel 运营商（开发中）
+│           │   ├── config/      # Unitel 配置
+│           │   └── controllers/ # 控制器（待开发）
+│           │
+│           └── ondo/            # Ondo 运营商（预留）
+│
+├── prisma/
+│   └── schema.prisma            # 数据库模型定义
+│
+└── docs/                        # 项目文档
+    ├── PROJECT_OVERVIEW.md      # 本文档
+    ├── BEST_PRACTICES.md        # 最佳实践
+    ├── API_VERSIONING.md        # API 版本管理
+    └── RATE_LIMITING.md         # 限流配置
 ```
+
+### 计划中的模块
+
+以下模块尚未实现，属于下一阶段开发内容：
+
+```
+src/modules/
+├── auth/                        # 认证授权模块
+│   ├── user/                    # 用户端认证
+│   │   └── wechat/              # 微信网页授权
+│   └── admin/                   # 管理端认证
+│
+├── user/                        # 用户模块
+├── admin/                       # 管理员模块
+│
+└── payment/                     # 支付模块
+    └── wechat-pay/              # 微信支付
+```
+
+---
+
+## 🗄️ 数据库设计
+
+### 当前数据库表（基于 Prisma Schema）
+
+#### User - 用户表（微信用户）
+```prisma
+model User {
+  openid String @id                    // 微信 openid（主键）
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 关联关系
+  unitelOrders UnitelOrder[]
+
+  @@map("users")
+}
+```
+
+**说明**:
+- 当前设计极简，仅用于订单关联
+- 使用 `openid` 作为主键
+- 未来可扩展：昵称、头像、黑名单等功能
+
+#### Admin - 管理员表
+```prisma
+model Admin {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String                        // BCrypt 加密
+  email     String?
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admins")
+}
+```
+
+#### ExchangeRate - 汇率表
+```prisma
+model ExchangeRate {
+  id        String   @id @default("MNT_CNY")  // 固定ID
+  rate      Decimal  @db.Decimal(10, 4)       // 汇率值 (440)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("exchange_rates")
+}
+```
+
+**功能状态**: ✅ 已实现并提供 API 接口
+
+#### UnitelOrder - Unitel 订单表
+```prisma
+model UnitelOrder {
+  // 订单基本信息
+  orderNo String @id                     // 订单号（主键）
+
+  // 用户信息
+  openid String
+  user   User   @relation(fields: [openid], references: [openid])
+  msisdn String                          // 手机号码
+  orderType String                       // 订单类型: balance | data | invoice_payment
+
+  // 金额信息（双币种）
+  amountMnt    Decimal  @db.Decimal(10, 2)    // 蒙古国货币金额(MNT)
+  amountCny    Decimal  @db.Decimal(10, 2)    // 人民币金额(CNY)
+  exchangeRate Decimal? @db.Decimal(10, 4)    // 汇率快照
+
+  // 产品信息
+  packageCode    String                       // 套餐代码
+  packageName    String                       // 套餐名称（蒙古语）
+  packageEngName String                       // 套餐英文名称
+  packageUnit    Int?                         // 话费单位
+  packageData    String?                      // 流量大小（如"3GB"）
+  packageDays    Int?                         // 有效期天数
+
+  // 状态管理
+  paymentStatus  String                       // 支付状态: unpaid | paid | refunded
+  rechargeStatus String                       // 充值状态: pending | processing | success | failed
+
+  // Unitel API 特有字段
+  svId   String?                              // Unitel服务ID
+  seq    String?                              // Unitel序列号
+  method String?                              // 支付方式
+
+  // VAT 发票信息 (JSON存储)
+  vatFlag       String?                       // VAT标志 1=开发票, 0=不开
+  vatRegisterNo String?                       // VAT注册号
+  vatInfo       Json?                         // 完整的VAT发票信息
+
+  // API 响应信息
+  apiResult String?                           // API返回的result字段
+  apiCode   String?                           // API返回的code字段
+  apiMsg    String?                           // API返回的msg字段
+  apiRaw    Json?                             // 完整的API响应(用于调试)
+
+  // 错误信息
+  errorMessage String?                        // 错误消息
+  errorCode    String?                        // 错误代码
+
+  // 时间戳
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  paidAt      DateTime?                       // 支付时间
+  completedAt DateTime?                       // 完成时间
+
+  @@index([openid])
+  @@index([msisdn])
+  @@index([paymentStatus])
+  @@index([rechargeStatus])
+  @@index([orderType])
+  @@index([createdAt])
+  @@map("unitel_orders")
+}
+```
+
+**索引设计**:
+- `openid` - 查询用户订单
+- `msisdn` - 手机号查询
+- `paymentStatus` - 支付状态筛选
+- `rechargeStatus` - 充值状态筛选
+- `orderType` - 订单类型筛选
+- `createdAt` - 时间范围查询
 
 ---
 
@@ -83,8 +244,9 @@
 
 ### 当前汇率
 - **固定汇率**: 440（蒙古国货币图格里克 MNT 兑人民币 CNY）
-- **存储位置**: 数据库配置表（未来开发）
-- **更新方式**: 管理员手动更新
+- **存储位置**: PostgreSQL 数据库 `exchange_rates` 表
+- **更新方式**: 管理员手动更新（API 待开发）
+- **查询接口**: `GET /api/exchange-rate` ✅ 已实现
 
 ### 换算公式
 ```javascript
@@ -104,158 +266,7 @@ amountCNY = amountMNT / 440
 
 ---
 
-## 🏗️ 架构设计
-
-### 模块化架构
-
-```
-elife-service/
-├── src/
-│   ├── main.ts                  # 应用入口
-│   ├── app.module.ts            # 根模块
-│   │
-│   ├── config/                  # 全局配置
-│   │   └── env.validation.ts
-│   │
-│   ├── common/                  # 共享组件
-│   │   ├── guards/              # 守卫
-│   │   ├── interceptors/        # 拦截器
-│   │   └── filters/             # 异常过滤器
-│   │
-│   ├── prisma/                  # Prisma 模块
-│   │   ├── prisma.service.ts
-│   │   └── prisma.module.ts
-│   │
-│   ├── redis/                   # Redis 模块
-│   │   ├── redis.service.ts
-│   │   └── redis.module.ts
-│   │
-│   └── modules/                 # 业务模块
-│       │
-│       ├── auth/                # 认证模块（共享）
-│       │   ├── user/            # 用户端认证
-│       │   │   └── wechat/      # 微信网页授权
-│       │   └── admin/           # 管理端认证
-│       │
-│       ├── user/                # 用户模块（共享）
-│       ├── admin/               # 管理员模块（共享）
-│       │
-│       ├── payment/             # 支付模块（共享）
-│       │   └── wechat-pay/      # 微信支付
-│       │
-│       └── operators/           # 运营商模块（隔离）
-│           │
-│           ├── unitel/          # Unitel 运营商
-│           │   ├── config/      # Unitel 配置
-│           │   ├── dto/         # 数据传输对象
-│           │   ├── enums/       # 枚举定义
-│           │   ├── services/    # 业务逻辑
-│           │   │   ├── unitel.service.ts        # API 对接
-│           │   │   └── unitel-order.service.ts  # 订单业务
-│           │   ├── controllers/ # 控制器（未来开发）
-│           │   └── unitel.module.ts
-│           │
-│           ├── mobicom/         # Mobicom 运营商（预留）
-│           └── ondo/            # Ondo 运营商（预留）
-│
-├── prisma/
-│   └── schema.prisma            # 数据库模型定义
-│
-└── docs/                        # 项目文档
-    ├── PROJECT_OVERVIEW.md      # 本文档
-    ├── DATA_MIGRATION.md        # 数据迁移指南
-    ├── BEST_PRACTICES.md        # 最佳实践
-    ├── API_VERSIONING.md        # API 版本管理
-    └── RATE_LIMITING.md         # 限流配置
-```
-
-### 运营商隔离设计
-
-**核心原则**: 每个运营商完全独立，零耦合
-
-- ✅ 独立的数据表（UnitelOrder, MobicomOrder, OndoOrder）
-- ✅ 独立的 Service 层（unitel.service.ts, mobicom.service.ts）
-- ✅ 独立的 Module（unitel.module.ts, mobicom.module.ts）
-- ✅ 独立的配置（unitel.config.ts, mobicom.config.ts）
-
-**优势**:
-- 故障隔离：某个运营商故障不影响其他运营商
-- 易于扩展：添加新运营商无需修改现有代码
-- 独立部署：未来可拆分为微服务
-
----
-
-## 🗄️ 数据库设计
-
-### 共享表
-
-#### User - 用户表
-```prisma
-model User {
-  id            String   @id @default(uuid())
-  openid        String   @unique              // 微信 openid
-  nickname      String?                       // 微信昵称
-  avatar        String?                       // 微信头像
-  phone         String?                       // 手机号
-
-  // 黑名单功能
-  isBlacklisted   Boolean  @default(false)    // 是否拉黑
-  blacklistedAt   DateTime?                   // 拉黑时间
-  blacklistReason String?                     // 拉黑原因
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  unitelOrders  UnitelOrder[]                // 订单关联
-
-  @@map("users")
-}
-```
-
-#### Admin - 管理员表
-```prisma
-model Admin {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  password  String                           // BCrypt 加密
-  email     String?
-  role      String   @default("admin")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("admins")
-}
-```
-
-### Unitel 运营商表
-
-#### UnitelOrder - Unitel 订单表
-
-详细字段说明参见 `docs/DATA_MIGRATION.md`
-
-**核心字段组**:
-1. **用户信息**: userId（关联 User）
-2. **订单信息**: orderNo, msisdn, orderType
-3. **金额信息**: amountMnt, amountCny, exchangeRate
-4. **产品信息**: packageCode, productName, productEngName, productUnit, productData, productDays
-5. **状态管理**: paymentStatus, rechargeStatus
-6. **Unitel API**: svId, seq, method
-7. **发票信息**: vatFlag, vatRegisterNo, vatInfo
-8. **API 响应**: apiResult, apiCode, apiMsg, apiRaw
-9. **时间戳**: createdAt, updatedAt, paidAt, completedAt
-
-**索引优化**:
-- `userId` - 查询用户订单
-- `orderNo` - 订单号查询
-- `msisdn` - 手机号查询
-- `paymentStatus` - 支付状态筛选
-- `rechargeStatus` - 充值状态筛选
-- `orderType` - 订单类型筛选
-- `createdAt` - 时间范围查询
-
----
-
-## 🔌 Unitel API 集成
+## 🔌 Unitel API 集成（计划中）
 
 ### 认证机制
 
@@ -270,123 +281,39 @@ model Admin {
    Headers: Authorization: Bearer {access_token}
 ```
 
-**Token 管理**:
+**Token 管理计划**:
 - Redis 缓存（TTL: 3600秒）
 - 自动刷新机制
 - 401 错误自动重试
 
-### 主要 API 端点
+### 主要 API 端点（待实现）
 
-| 端点 | 方法 | 功能 | DTO |
-|------|------|------|-----|
-| `/auth` | POST | 获取 Token | UnitelTokenDto |
-| `/service/servicetype` | POST | 获取资费列表 | GetServiceTypeRequestDto |
-| `/service/unitel` | POST | 获取后付费账单 | GetInvoiceRequestDto |
-| `/service/recharge` | POST | 充值话费 | RechargeBalanceRequestDto |
-| `/service/datapackage` | POST | 充值流量 | RechargeDataRequestDto |
-| `/service/payment` | POST | 支付账单 | PayInvoiceRequestDto |
-
-### 资费列表结构
-
-```typescript
-// 套餐项字段
-interface CardItem {
-  code: string;           // 套餐代码（如 "SD5000"）
-  name: string;           // 套餐名称（蒙古语）
-  eng_name: string;       // 英文名称
-  price: number;          // 价格（MNT）
-  unit?: number;          // 话费单位
-  data?: string;          // 流量大小（如 "3GB"）
-  days?: number;          // 有效期天数
-  short_name: string;     // 简称
-}
-
-// 资费分类
-interface Service {
-  cards: {
-    day: CardItem[];      // 可续租期话费
-    noday: CardItem[];    // 纯话费
-    special: CardItem[];  // 特殊套餐
-  };
-  data: {
-    data: CardItem[];          // 流量包
-    days: CardItem[];          // 按天流量包
-    entertainment: CardItem[]; // 专用流量（游戏、音乐等）
-  };
-}
-```
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| `/auth` | POST | 获取 Token |
+| `/service/servicetype` | POST | 获取资费列表 |
+| `/service/unitel` | POST | 获取后付费账单 |
+| `/service/recharge` | POST | 充值话费 |
+| `/service/datapackage` | POST | 充值流量 |
+| `/service/payment` | POST | 支付账单 |
 
 ---
 
-## 📊 数据迁移
+## 🚀 已实现的 API 路由
 
-### 老系统数据结构
-
-**old_users 表**:
-- `openid` (主键)
-- `created_at`
-- `updated_at`
-
-**old_unitel_orders 表** (使用 order_number 作为主键):
-- `order_number` → 新表 `orderNo`
-- `openid` → 通过关联转为 `userId`
-- `phone_number` → `msisdn`
-- `product_recharge_type` → `orderType`
-- `product_code` → `packageCode`
-- `product_price_tg` → `amountMnt`
-- `product_price_rmb` → `amountCny`
-- `product_name` → `packageName`
-- `product_unit` → `packageUnit`
-- `product_data` → `packageData`
-- `product_days` → `packageDays`
-- `payment_status` → `paymentStatus`
-- `recharge_status` → `rechargeStatus`
-
-**新增字段** (老数据无此字段):
-- `packageEngName` - 套餐英文名称
-- `exchangeRate` - 汇率快照（迁移时使用 440）
-- `isBlacklisted` - 黑名单标记（默认 false）
-
-详细迁移脚本参见 `docs/DATA_MIGRATION.md`
-
----
-
-## 🚀 API 路由设计
-
-### 用户端 API
-
+### 健康检查
 ```
-# 认证
-POST   /api/auth/wechat/login         # 微信授权登录
-
-# Unitel 服务
-POST   /api/unitel/services           # 获取资费列表
-POST   /api/unitel/orders              # 创建订单
-GET    /api/unitel/orders              # 查询订单列表
-GET    /api/unitel/orders/:id          # 查询订单详情
-
-# 支付
-POST   /api/payment/wechat/create      # 创建支付订单
-POST   /api/payment/wechat/notify      # 微信支付回调
-GET    /api/payment/wechat/query/:id   # 查询支付状态
+GET    /api/health                # 健康检查
 ```
 
-### 管理端 API
-
+### 汇率查询
 ```
-# 认证
-POST   /api/admin/login                # 管理员登录
+GET    /api/exchange-rate         # 获取当前汇率信息
+```
 
-# 订单管理
-GET    /api/admin/unitel/orders        # 订单列表（支持筛选、分页）
-GET    /api/admin/unitel/orders/:id    # 订单详情
-PATCH  /api/admin/unitel/orders/:id    # 更新订单状态
-POST   /api/admin/unitel/orders/:id/refund  # 退款
-
-# 用户管理
-GET    /api/admin/users                # 用户列表
-GET    /api/admin/users/:id            # 用户详情
-PATCH  /api/admin/users/:id/blacklist  # 拉黑用户
+### Swagger 文档（开发环境）
+```
+GET    /api/docs                  # Swagger API 文档
 ```
 
 ---
@@ -396,55 +323,36 @@ PATCH  /api/admin/users/:id/blacklist  # 拉黑用户
 ### 限流保护
 - **全局限流**: 60秒内最多10次请求
 - **配置**: `THROTTLE_TTL=60`, `THROTTLE_LIMIT=10`
-- **实现**: `@nestjs/throttler` + 自定义 Guard
+- **实现**: `@nestjs/throttler` + ThrottlerBehindProxyGuard
+- **代理支持**: 支持负载均衡器后的真实IP识别
 
 ### 安全中间件
 - **Helmet**: HTTP 头部安全
 - **CORS**: 跨域请求控制
-- **Validation Pipe**: 自动数据验证
+- **Validation Pipe**: 自动数据验证和类型转换
 
-### 认证授权
-- **用户端**: 微信网页授权 + JWT Token
-- **管理端**: 账号密码 + JWT Token
-- **API 保护**: JWT Guard + Role Guard
+### API 版本控制
+- **方式**: Header-based（`X-API-Version`）
+- **默认版本**: `1`
+- **实现**: NestJS Versioning
 
 ---
 
 ## 📈 性能优化
 
 ### Redis 缓存
-- Unitel API Token（TTL: 1小时）
-- 资费列表缓存（可选）
-- 用户 Session
+- Unitel API Token（计划中）
+- 资费列表缓存（计划中）
+- 用户 Session（计划中）
 
 ### 数据库优化
-- 合理的索引设计
-- Prisma 查询优化
-- 连接池管理
-
-### API 优化
-- 请求重试机制（Unitel API）
-- 超时控制（30秒）
-- 错误处理与降级
+- 合理的索引设计（已实现）
+- Prisma Client 连接池
+- 查询优化
 
 ---
 
-## 🧪 测试策略
-
-### 单元测试
-- Service 层业务逻辑
-- Utility 函数
-
-### 集成测试
-- API 端点测试
-- 数据库操作测试
-
-### E2E 测试
-- 完整业务流程测试
-
----
-
-## 🚀 部署指南
+## 🌍 环境配置
 
 ### 环境变量
 
@@ -452,8 +360,12 @@ PATCH  /api/admin/users/:id/blacklist  # 拉黑用户
 
 ```env
 # 应用
-NODE_ENV=production
+NODE_ENV=development
 PORT=3000
+
+# 限流
+THROTTLE_TTL=60
+THROTTLE_LIMIT=10
 
 # 数据库
 DATABASE_URL=postgresql://user:pass@host:5432/elife_db
@@ -461,14 +373,43 @@ DATABASE_URL=postgresql://user:pass@host:5432/elife_db
 # Redis
 REDIS_HOST=localhost
 REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
 
-# Unitel API
-UNITEL_USERNAME=xxx
-UNITEL_PASSWORD=xxx
+# Unitel API（待使用）
+UNITEL_USERNAME=your_username
+UNITEL_PASSWORD=your_password
 UNITEL_BASE_URL=https://api.unitel.mn/api/v1
 ```
 
-### 部署步骤
+---
+
+## 🚀 部署指南
+
+### 本地开发
+
+```bash
+# 1. 安装依赖
+npm install
+
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件
+
+# 3. 启动数据库（Docker）
+docker-compose up -d
+
+# 4. 生成 Prisma Client
+npx prisma generate
+
+# 5. 数据库迁移
+npx prisma migrate dev
+
+# 6. 启动开发服务器
+npm run start:dev
+```
+
+### 生产部署
 
 ```bash
 # 1. 安装依赖
@@ -489,21 +430,66 @@ npm run start:prod
 
 ---
 
-## 📝 待开发功能
+## 📝 开发状态
 
-### 短期（Version 2.0）
+### ✅ 已完成功能
+
+**基础设施**:
+- [x] NestJS 项目框架搭建
+- [x] Prisma ORM 集成
+- [x] PostgreSQL 数据库配置
+- [x] Redis 缓存集成
+- [x] 环境变量验证
+- [x] 全局异常过滤器
+- [x] 请求限流（防滥用）
+- [x] API 版本控制
+- [x] Swagger 文档
+- [x] 安全中间件（Helmet, CORS）
+
+**业务功能**:
+- [x] 健康检查端点
+- [x] 汇率管理模块
+  - [x] 汇率查询 API
+  - [x] 数据库存储
+
+**数据库设计**:
+- [x] User 表（基础版本）
+- [x] Admin 表
+- [x] ExchangeRate 表
+- [x] UnitelOrder 表（Schema定义完成）
+
+### 🚧 开发中功能
+
+**Unitel 运营商集成**:
+- [ ] Unitel API 认证服务
+- [ ] 资费列表查询
+- [ ] 订单创建与管理
+- [ ] 充值业务逻辑
+
+### 📋 待开发功能
+
+**Phase 1 - 核心业务（优先级高）**:
 - [ ] 微信网页授权登录
+- [ ] Unitel 完整业务流程
+  - [ ] 资费列表查询
+  - [ ] 订单创建
+  - [ ] 充值接口对接
 - [ ] 微信支付集成
-- [ ] 订单管理 API
-- [ ] 管理后台基础功能
+- [ ] 订单查询与管理
 
-### 中期（Version 2.1）
-- [ ] 未支付订单重新支付
+**Phase 2 - 管理功能**:
+- [ ] 管理员认证与授权
+- [ ] 订单管理后台
+- [ ] 汇率管理界面
+- [ ] 用户管理
+
+**Phase 3 - 增强功能**:
 - [ ] 订单退款功能
 - [ ] 用户黑名单管理
-- [ ] 汇率管理（动态配置）
+- [ ] 汇率动态配置
+- [ ] 数据统计与报表
 
-### 长期（Version 3.0）
+**Phase 4 - 扩展（长期规划）**:
 - [ ] Mobicom 运营商集成
 - [ ] Ondo 运营商集成
 - [ ] 多运营商对比选择
@@ -512,15 +498,48 @@ npm run start:prod
 
 ---
 
-## 👥 团队与维护
+## 🏛️ 架构设计原则
+
+### 运营商隔离设计
+
+**核心原则**: 每个运营商完全独立，零耦合
+
+- ✅ 独立的数据表（UnitelOrder, MobicomOrder, OndoOrder）
+- ✅ 独立的 Service 层（unitel.service.ts, mobicom.service.ts）
+- ✅ 独立的 Module（unitel.module.ts, mobicom.module.ts）
+- ✅ 独立的配置（unitel.config.ts, mobicom.config.ts）
+
+**优势**:
+- 故障隔离：某个运营商故障不影响其他运营商
+- 易于扩展：添加新运营商无需修改现有代码
+- 独立部署：未来可拆分为微服务
+
+**扩展方法**:
+1. 在 `src/modules/operators/` 下创建新运营商目录
+2. 定义该运营商的 Prisma Schema
+3. 实现独立的业务逻辑
+4. 在 `app.module.ts` 中注册
+5. 无需修改其他运营商代码
+
+---
+
+## 👥 项目信息
 
 ### 项目状态
-- **当前版本**: 2.0（升级版开发中）
-- **老版本**: 1.0（已上线运行，有老数据需迁移）
+- **当前阶段**: 基础设施搭建完成，核心业务开发中
+- **开发版本**: 0.0.1
+- **技术债务**:
+  - User 表需要扩展（昵称、头像、黑名单等字段）
+  - 数据库主键策略需要统一（UUID vs 业务主键）
 
 ### 技术支持
 - NestJS 官方文档: https://docs.nestjs.com
 - Prisma 官方文档: https://www.prisma.io/docs
+
+### 相关文档
+- [最佳实践](./BEST_PRACTICES.md) - NestJS 开发最佳实践
+- [API 版本管理](./API_VERSIONING.md) - API 版本控制指南
+- [限流配置](./RATE_LIMITING.md) - 请求速率限制说明
 
 ---
 
@@ -530,5 +549,6 @@ Proprietary - All Rights Reserved
 
 ---
 
-**最后更新**: 2025-10-21
-**文档版本**: 1.0.0
+**最后更新**: 2025-10-22
+**文档版本**: 2.0.0
+**项目版本**: 0.0.1
