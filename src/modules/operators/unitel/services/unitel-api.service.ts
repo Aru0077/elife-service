@@ -170,7 +170,9 @@ export class UnitelApiService {
         timestamp: new Date().toISOString(),
       });
 
-      this.logger.debug(`[${traceId}] API 调用成功: ${endpoint} (${duration}ms)`);
+      this.logger.debug(
+        `[${traceId}] API 调用成功: ${endpoint} (${duration}ms)`,
+      );
       return response.data;
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -206,14 +208,19 @@ export class UnitelApiService {
           Authorization: 'Bearer ***REDACTED***',
         },
         requestBody: data,
-        responseStatus: error instanceof AxiosError ? error.response?.status : undefined,
-        responseBody: error instanceof AxiosError ? error.response?.data : undefined,
+        responseStatus:
+          error instanceof AxiosError ? error.response?.status : undefined,
+        responseBody:
+          error instanceof AxiosError ? error.response?.data : undefined,
         duration,
         error: errorMsg,
         timestamp: new Date().toISOString(),
       });
 
-      this.logger.error(`[${traceId}] Unitel API 调用失败: ${endpoint}`, errorMsg);
+      this.logger.error(
+        `[${traceId}] Unitel API 调用失败: ${endpoint}`,
+        errorMsg,
+      );
 
       throw new Error(`Unitel API 错误: ${errorMsg}`);
     }

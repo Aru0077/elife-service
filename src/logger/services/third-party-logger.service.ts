@@ -65,12 +65,18 @@ export class ThirdPartyLoggerService {
 
     return {
       ...log,
-      requestHeaders: this.sanitizeObject(log.requestHeaders, sensitiveKeys) as Record<string, string>,
+      requestHeaders: this.sanitizeObject(
+        log.requestHeaders,
+        sensitiveKeys,
+      ) as Record<string, string>,
       requestBody: this.sanitizeObject(
         log.requestBody as Record<string, unknown>,
         sensitiveKeys,
       ),
-      responseHeaders: this.sanitizeObject(log.responseHeaders, sensitiveKeys) as Record<string, string>,
+      responseHeaders: this.sanitizeObject(
+        log.responseHeaders,
+        sensitiveKeys,
+      ) as Record<string, string>,
       responseBody: this.sanitizeObject(
         log.responseBody as Record<string, unknown>,
         sensitiveKeys,
