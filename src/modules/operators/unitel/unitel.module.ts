@@ -5,8 +5,7 @@ import unitelConfig from './config/unitel.config';
 import { RedisModule } from '@/redis/redis.module';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { ExchangeRateModule } from '@/modules/exchange-rate';
-import { UnitelApiService, UnitelBusinessService } from './services';
-import { UnitelController } from './controllers/unitel.controller';
+import { UnitelApiService } from './services';
 
 /**
  * Unitel 运营商模块
@@ -29,8 +28,8 @@ import { UnitelController } from './controllers/unitel.controller';
     // 汇率模块（用于汇率转换）
     ExchangeRateModule,
   ],
-  controllers: [UnitelController],
-  providers: [UnitelApiService, UnitelBusinessService],
-  exports: [UnitelApiService, UnitelBusinessService], // 导出供其他模块使用
+  controllers: [],
+  providers: [UnitelApiService],
+  exports: [UnitelApiService], // 导出供其他模块使用
 })
 export class UnitelModule {}

@@ -548,6 +548,37 @@ npm run start:prod
 Proprietary - All Rights Reserved
 
 ---
+## 我的下一步开发步骤
+我对整个项目进行一个详细的介绍，请将这些内容整理后记录到项目docs文件中。
+
+现在开发的是一个蒙古国话费充值系统，目前有两部分组成：
+后端服务elife-service，
+前端网页elife-site。
+
+充值系统的使用方法流程：
+1，用户在微信内打开elife-site，进行微信授权静默登录，获取code，传给elife-service，生成token后传给前端。（用户无感知），同时获取汇率（用于将蒙古国货币换算成人民币）
+
+2，在输入框输入蒙古过手机号码，点击获取资费按钮进行资费列表的获取。（自动换算价格展示人民币价格）
+3，点击其中一个资费后跳转到确认订单页。
+4，点击提交订单后进入支付页，
+5，点击支付，输入密码，支付成功，点击返回首页，或者查看订单。
+
+elife-service项目进度：
+1，http-exception.filter.ts全局异常，
+2，throttler-behind-proxy.guard.ts速率控制
+3，env.validation.ts配置验证
+4，health 健康模块
+5，logger日志模块，使用阿里云SLS持久化储存。
+6，prisma ORM
+7，redis
+8，modules/exchange-rate汇率模块，
+9，modules/operators/unitel/config,  
+modules/operators/unitel/enums,  
+modules/operators/unitel/interfaces,  modules/operators/unitel/services/unitel-api.service,
+
+elife-service项目下一步计划：实现微信授权登录，jwt，设计unitel控制器，创建端口，unitel专属订单模块，微信支付，
+
+注意事项：不能重复请求第三方api，例如获取token，进行充值等api。尤其禁止重复充值。
 
 **最后更新**: 2025-10-22
 **文档版本**: 2.0.0
