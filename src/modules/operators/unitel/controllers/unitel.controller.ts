@@ -25,10 +25,7 @@ import {
   OrderResponseDto,
   OrderListResponseDto,
 } from '../dto';
-import {
-  ServiceTypeResponse,
-  InvoiceResponse,
-} from '../interfaces';
+import { ServiceTypeResponse, InvoiceResponse } from '../interfaces';
 
 /**
  * Unitel 控制器
@@ -37,9 +34,7 @@ import {
 @ApiTags('Unitel 运营商')
 @Controller('api/unitel')
 export class UnitelController {
-  constructor(
-    private readonly unitelBusinessService: UnitelBusinessService,
-  ) {}
+  constructor(private readonly unitelBusinessService: UnitelBusinessService) {}
 
   /**
    * 获取资费列表
@@ -56,7 +51,7 @@ export class UnitelController {
     status: 200,
     description: '成功获取资费列表',
   })
-  async getServiceTypes(
+  getServiceTypes(
     @Query() query: GetServiceTypeDto,
   ): Promise<ServiceTypeResponse> {
     return this.unitelBusinessService.getServiceTypes(query.msisdn);
@@ -77,9 +72,7 @@ export class UnitelController {
     status: 200,
     description: '成功获取账单信息',
   })
-  async getInvoice(
-    @Query() query: GetInvoiceDto,
-  ): Promise<InvoiceResponse> {
+  async getInvoice(@Query() query: GetInvoiceDto): Promise<InvoiceResponse> {
     return this.unitelBusinessService.getInvoice(query.msisdn);
   }
 
@@ -99,9 +92,7 @@ export class UnitelController {
     status: 400,
     description: '请求参数错误',
   })
-  async createOrder(
-    @Body() dto: CreateOrderDto,
-  ): Promise<OrderResponseDto> {
+  async createOrder(@Body() dto: CreateOrderDto): Promise<OrderResponseDto> {
     return this.unitelBusinessService.createOrder(dto);
   }
 

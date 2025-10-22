@@ -180,7 +180,8 @@ export class UnitelBusinessService {
       return this.mapOrderToDto(updatedOrder);
     } catch (error) {
       // 充值失败，保存错误信息
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
 
       const failedOrder = await this.prisma.unitelOrder.update({
         where: { orderNo },
@@ -201,7 +202,14 @@ export class UnitelBusinessService {
    * 获取用户订单列表（分页）
    */
   async getOrderList(query: OrderQueryDto): Promise<OrderListResponseDto> {
-    const { openid, orderType, paymentStatus, rechargeStatus, page = 1, limit = 10 } = query;
+    const {
+      openid,
+      orderType,
+      paymentStatus,
+      rechargeStatus,
+      page = 1,
+      limit = 10,
+    } = query;
 
     this.logger.info(`查询用户订单列表: ${openid}, 页码: ${page}`);
 
@@ -246,10 +254,7 @@ export class UnitelBusinessService {
    */
   private generateOrderNo(): string {
     const now = new Date();
-    const timestamp = now
-      .toISOString()
-      .replace(/[-:T]/g, '')
-      .slice(0, 14); // YYYYMMDDHHMMSS
+    const timestamp = now.toISOString().replace(/[-:T]/g, '').slice(0, 14); // YYYYMMDDHHMMSS
     const random = Math.floor(Math.random() * 1000000)
       .toString()
       .padStart(6, '0');
