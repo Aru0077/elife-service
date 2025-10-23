@@ -15,7 +15,7 @@ import { User } from '@prisma/client';
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     @Inject(jwtConfig.KEY)
-    private readonly config: ConfigType<typeof jwtConfig>,
+    config: ConfigType<typeof jwtConfig>,
     private readonly authService: AuthService,
   ) {
     super({

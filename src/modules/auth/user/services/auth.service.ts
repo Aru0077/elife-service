@@ -100,13 +100,4 @@ export class AuthService {
 
     return user;
   }
-
-  /**
-   * 获取用户信息
-   * @param openid 用户openid
-   * @returns 用户信息
-   */
-  async getUserProfile(openid: string): Promise<User> {
-    return this.validateUser(openid);
-  }
 }

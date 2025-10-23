@@ -27,12 +27,18 @@ import { UserAuthController } from './user-auth.controller';
     JwtModule.registerAsync({
       imports: [ConfigModule.forFeature(jwtConfig)],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('jwt.secret'),
-        signOptions: {
-          expiresIn: config.get<string>('jwt.expiresIn') || '7d',
-        },
-      }),
+      useFactory: (config: ConfigService) => {
+        const secret = config.get<string>('jwt.secret');
+        if (!secret) {
+          throw new Error('JWT_SECRET is not defined');
+        }
+        return {
+          secret,
+          signOptions: {
+            expiresIn: config.get<string>('jwt.expiresIn') || '7d',
+          },
+        };
+      },
     }),
 
     // HTTP 客户端（用于调用微信API）

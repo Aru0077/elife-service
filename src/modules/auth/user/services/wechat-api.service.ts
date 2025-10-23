@@ -62,7 +62,7 @@ export class WechatApiService {
       }
 
       this.logger.log(`成功获取微信用户openid: ${data.openid}`);
-      return data as WechatAccessTokenResponse;
+      return data;
     } catch (error) {
       // 如果是已经抛出的 BadRequestException，直接传递
       if (error instanceof BadRequestException) {
@@ -70,7 +70,9 @@ export class WechatApiService {
       }
 
       // 其他错误统一处理
-      this.logger.error(`调用微信API失败: ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`调用微信API失败: ${errorMessage}`, errorStack);
       throw new InternalServerErrorException('微信授权服务暂时不可用');
     }
   }

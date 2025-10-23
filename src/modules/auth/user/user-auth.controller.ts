@@ -1,27 +1,12 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  UseGuards,
-  Request,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './services/auth.service';
 import { WechatLoginDto } from './dto/wechat-login.dto';
-import { AuthResponseDto, UserProfileDto } from './dto/auth-response.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AuthResponseDto } from './dto/auth-response.dto';
 
 /**
  * 用户认证控制器
- * 提供微信授权登录和用户信息查询接口
+ * 提供微信授权登录接口
  */
 @ApiTags('用户认证')
 @Controller('auth/user')
@@ -55,31 +40,5 @@ export class UserAuthController {
     @Body() wechatLoginDto: WechatLoginDto,
   ): Promise<AuthResponseDto> {
     return this.authService.wechatLogin(wechatLoginDto.code);
-  }
-
-  /**
-   * 获取当前用户信息
-   * 需要在Header中携带JWT token
-   */
-  @Get('profile')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: '获取当前用户信息',
-    description: '需要JWT认证，返回当前登录用户的信息',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    type: UserProfileDto,
-  })
-  @ApiResponse({
-    status: 401,
-    description: '未授权或token无效',
-  })
-  async getProfile(@Request() req): Promise<UserProfileDto> {
-    // req.user 是由 JwtStrategy 验证后挂载的
-    const { openid, createdAt, updatedAt } = req.user;
-    return { openid, createdAt, updatedAt };
   }
 }
