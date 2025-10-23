@@ -6,10 +6,13 @@ import { RedisModule } from '@/redis/redis.module';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { ExchangeRateModule } from '@/modules/exchange-rate';
 import { UnitelApiService } from './services';
+import { UnitelOrderService } from './services/unitel-order.service';
+import { UnitelOrderController } from './controllers/unitel-order.controller';
+import { UnitelServiceController } from './controllers/unitel-service.controller';
 
 /**
  * Unitel 运营商模块
- * 提供 Unitel API 封装服务和业务逻辑
+ * 提供 Unitel API 封装服务、订单业务逻辑和 API 端点
  */
 @Module({
   imports: [
@@ -28,8 +31,8 @@ import { UnitelApiService } from './services';
     // 汇率模块（用于汇率转换）
     ExchangeRateModule,
   ],
-  controllers: [],
-  providers: [UnitelApiService],
-  exports: [UnitelApiService], // 导出供其他模块使用
+  controllers: [UnitelOrderController, UnitelServiceController],
+  providers: [UnitelApiService, UnitelOrderService],
+  exports: [UnitelApiService, UnitelOrderService], // 导出供其他模块使用（如支付模块）
 })
 export class UnitelModule {}
