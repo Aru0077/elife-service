@@ -10,6 +10,7 @@ import { LoggerModule } from '@/logger/logger.module';
 import { ThrottlerBehindProxyGuard } from '@/common/guards/throttler-behind-proxy.guard';
 import { ExchangeRateModule } from '@/modules/exchange-rate';
 import { UnitelModule } from '@/modules/operators/unitel/unitel.module';
+import { UserAuthModule } from '@/modules/auth/user/user-auth.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { UnitelModule } from '@/modules/operators/unitel/unitel.module';
     HealthModule,
     ExchangeRateModule,
     UnitelModule,
+    UserAuthModule, // 用户认证模块
   ],
   providers: [
     {
