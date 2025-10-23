@@ -26,7 +26,10 @@ export class UnitelOrderController {
    * POST /operators/unitel/orders
    */
   @Post()
-  async createOrder(@Request() req: any, @Body() dto: CreateOrderDto) {
+  async createOrder(
+    @Request() req: { user: { openid: string } },
+    @Body() dto: CreateOrderDto,
+  ) {
     const openid = req.user.openid; // JWT 验证后用户信息存储在 req.user
     return this.orderService.createOrder(openid, dto);
   }
@@ -36,7 +39,10 @@ export class UnitelOrderController {
    * GET /operators/unitel/orders?page=1&pageSize=20&paymentStatus=paid
    */
   @Get()
-  async getUserOrders(@Request() req: any, @Query() dto: QueryOrderDto) {
+  async getUserOrders(
+    @Request() req: { user: { openid: string } },
+    @Query() dto: QueryOrderDto,
+  ) {
     const openid = req.user.openid;
     return this.orderService.findUserOrders(openid, dto);
   }
