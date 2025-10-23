@@ -3,7 +3,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { Prisma, UnitelOrder } from '@prisma/client';
 import { nanoid } from 'nanoid';
 import { PrismaService } from '@/prisma/prisma.service';
-import { ExchangeRateService } from '@/modules/exchange-rate/exchange-rate.service';
+import { ExchangeRateService } from '@/modules/exchange-rate/services/exchange-rate.service';
 import { CreateOrderDto, QueryOrderDto } from '../dto';
 import { PaymentStatus, RechargeStatus } from '../enums';
 
