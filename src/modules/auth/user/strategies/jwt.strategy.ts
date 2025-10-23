@@ -18,6 +18,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     config: ConfigType<typeof jwtConfig>,
     private readonly authService: AuthService,
   ) {
+    // 确保 JWT secret 存在
+    if (!config.secret) {
+      throw new Error('JWT_SECRET is not defined');
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), // 从 Header 的 Bearer token 中提取
       ignoreExpiration: false, // 不忽略过期时间

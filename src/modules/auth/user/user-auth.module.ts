@@ -35,7 +35,7 @@ import { UserAuthController } from './user-auth.controller';
         return {
           secret,
           signOptions: {
-            expiresIn: config.get<string>('jwt.expiresIn') || '7d',
+            expiresIn: (config.get<string>('jwt.expiresIn') || '7d') as string,
           },
         };
       },
