@@ -1,19 +1,19 @@
 import { IsString } from 'class-validator';
 
 /**
- * ��D9h DTO
+ * 获取服务类型 DTO
  */
 export class GetServiceTypeDto {
-  /** K:� */
+  /** 手机号 */
   @IsString()
   msisdn: string;
 }
 
 /**
- * ���9&U DTO
+ * 获取账单 DTO
  */
 export class GetInvoiceDto {
-  /** K:� */
+  /** 手机号 */
   @IsString()
   msisdn: string;
 }
