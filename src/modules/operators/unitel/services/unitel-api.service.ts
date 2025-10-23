@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigType } from '@nestjs/config';
 import { AxiosError, AxiosResponse } from 'axios';
@@ -17,7 +17,10 @@ import {
   RechargeBalanceParams,
   RechargeDataParams,
   PayInvoiceParams,
+  CardItem,
 } from '../interfaces';
+import { PackageDetail } from '../interfaces/order.interface';
+import { OrderType } from '../enums';
 
 /**
  * Unitel API 服务
@@ -30,6 +33,9 @@ import {
 @Injectable()
 export class UnitelApiService {
   private readonly REDIS_TOKEN_KEY = 'unitel:access_token';
+  private readonly REDIS_SERVICE_TYPES_PREFIX = 'unitel:service_types';
+  private readonly REDIS_INVOICE_PREFIX = 'unitel:invoice';
+  private readonly CACHE_TTL = 300; // 5分钟（秒）
 
   constructor(
     private readonly httpService: HttpService,
@@ -293,5 +299,188 @@ export class UnitelApiService {
    */
   async payInvoice(params: PayInvoiceParams): Promise<PaymentResponse> {
     return this.request<PaymentResponse>('POST', '/service/payment', params);
+  }
+
+  // ========== 缓存层方法（安全价格验证） ==========
+
+  /**
+   * 获取缓存的资费列表（5分钟TTL）
+   * 用于防止价格篡改和减轻第三方API压力
+   *
+   * @param msisdn 手机号
+   * @param openid 用户openid
+   * @returns 资费列表
+   */
+  async getCachedServiceTypes(
+    msisdn: string,
+    openid: string,
+  ): Promise<ServiceTypeResponse> {
+    const cacheKey = `${this.REDIS_SERVICE_TYPES_PREFIX}:${openid}:${msisdn}`;
+
+    // 1. 尝试从缓存获取
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      this.logger.debug(`使用缓存的资费列表: ${cacheKey}`);
+      return JSON.parse(cached);
+    }
+
+    // 2. 缓存miss，调用API获取
+    this.logger.info(`缓存miss，正在从第三方获取资费列表: ${msisdn}`);
+    const response = await this.getServiceType(msisdn);
+
+    // 3. 保存到Redis（5分钟TTL）
+    await this.redisService.set(
+      cacheKey,
+      JSON.stringify(response),
+      this.CACHE_TTL,
+    );
+    this.logger.info(`资费列表已缓存: ${cacheKey}`);
+
+    return response;
+  }
+
+  /**
+   * 获取缓存的账单信息（5分钟TTL）
+   *
+   * @param msisdn 手机号
+   * @param openid 用户openid
+   * @returns 账单信息
+   */
+  async getCachedInvoice(
+    msisdn: string,
+    openid: string,
+  ): Promise<InvoiceResponse> {
+    const cacheKey = `${this.REDIS_INVOICE_PREFIX}:${openid}:${msisdn}`;
+
+    // 1. 尝试从缓存获取
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      this.logger.debug(`使用缓存的账单信息: ${cacheKey}`);
+      return JSON.parse(cached);
+    }
+
+    // 2. 缓存miss，调用API获取
+    this.logger.info(`缓存miss，正在从第三方获取账单信息: ${msisdn}`);
+    const response = await this.getInvoice(msisdn);
+
+    // 3. 保存到Redis（5分钟TTL）
+    await this.redisService.set(
+      cacheKey,
+      JSON.stringify(response),
+      this.CACHE_TTL,
+    );
+    this.logger.info(`账单信息已缓存: ${cacheKey}`);
+
+    return response;
+  }
+
+  /**
+   * 根据packageCode查找套餐详情（核心方法）
+   * 用于创建订单时的价格验证
+   *
+   * @param params 查询参数
+   * @returns 套餐详情（包含实时价格）
+   * @throws NotFoundException 套餐不存在时抛出
+   */
+  async findPackageByCode(params: {
+    packageCode: string;
+    msisdn: string;
+    openid: string;
+    orderType: OrderType;
+  }): Promise<PackageDetail> {
+    const { packageCode, msisdn, openid, orderType } = params;
+
+    // 1. 根据订单类型查询不同数据源
+    if (orderType === OrderType.INVOICE_PAYMENT) {
+      // 账单支付：从账单信息中获取
+      return this.findInvoicePackage(packageCode, msisdn, openid);
+    } else {
+      // 话费/流量充值：从资费列表中查找
+      return this.findServicePackage(packageCode, msisdn, openid, orderType);
+    }
+  }
+
+  /**
+   * 从账单信息中查找套餐详情
+   * @private
+   */
+  private async findInvoicePackage(
+    invoiceDate: string,
+    msisdn: string,
+    openid: string,
+  ): Promise<PackageDetail> {
+    const invoice = await this.getCachedInvoice(msisdn, openid);
+
+    // 验证账单日期是否匹配
+    if (invoice.invoice_date !== invoiceDate) {
+      throw new NotFoundException(
+        `账单日期不匹配，当前账单期为: ${invoice.invoice_date}`,
+      );
+    }
+
+    // 构造账单套餐详情
+    return {
+      code: invoiceDate,
+      name: `账单支付 ${invoiceDate}`,
+      engName: `Invoice Payment ${invoiceDate}`,
+      price: invoice.total_unpaid, // 使用总未付金额
+      type: 'invoice',
+    };
+  }
+
+  /**
+   * 从资费列表中查找套餐详情
+   * @private
+   */
+  private async findServicePackage(
+    packageCode: string,
+    msisdn: string,
+    openid: string,
+    orderType: OrderType,
+  ): Promise<PackageDetail> {
+    const serviceTypes = await this.getCachedServiceTypes(msisdn, openid);
+
+    let foundCard: CardItem | undefined;
+    let packageType: 'balance' | 'data' | undefined;
+
+    // 2. 根据订单类型在不同分类中查找
+    if (orderType === OrderType.BALANCE) {
+      // 话费充值：在 service.cards 中查找
+      const allBalanceCards = [
+        ...(serviceTypes.service.cards.day || []),
+        ...(serviceTypes.service.cards.noday || []),
+        ...(serviceTypes.service.cards.special || []),
+      ];
+      foundCard = allBalanceCards.find((card) => card.code === packageCode);
+      packageType = 'balance';
+    } else if (orderType === OrderType.DATA) {
+      // 流量充值：在 service.data 中查找
+      const allDataCards = [
+        ...(serviceTypes.service.data.data || []),
+        ...(serviceTypes.service.data.days || []),
+        ...(serviceTypes.service.data.entertainment || []),
+      ];
+      foundCard = allDataCards.find((card) => card.code === packageCode);
+      packageType = 'data';
+    }
+
+    // 3. 未找到套餐
+    if (!foundCard || !packageType) {
+      throw new NotFoundException(
+        `套餐不存在或已下架: ${packageCode} (类型: ${orderType})`,
+      );
+    }
+
+    // 4. 构造套餐详情
+    return {
+      code: foundCard.code,
+      name: foundCard.name,
+      engName: foundCard.eng_name,
+      price: foundCard.price,
+      type: packageType,
+      unit: foundCard.unit,
+      data: foundCard.data,
+      days: foundCard.days,
+    };
   }
 }

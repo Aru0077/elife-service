@@ -6,6 +6,8 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { ExchangeRateService } from '@/modules/exchange-rate/services/exchange-rate.service';
 import { CreateOrderDto, QueryOrderDto } from '../dto';
 import { PaymentStatus, RechargeStatus } from '../enums';
+import { CreateOrderResult } from '../interfaces/order.interface';
+import { UnitelApiService } from './unitel-api.service';
 
 /**
  * Unitel 订单服务
@@ -16,47 +18,76 @@ export class UnitelOrderService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly exchangeRateService: ExchangeRateService,
+    private readonly unitelApiService: UnitelApiService,
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(UnitelOrderService.name);
   }
 
   /**
-   * 创建订单
+   * 创建订单（带价格验证）
    * @param openid 用户的 openid
-   * @param dto 创建订单的数据
-   * @returns 新创建的订单
+   * @param dto 创建订单的数据（只包含 msisdn, orderType, packageCode）
+   * @returns 创建订单结果（包含价格变动提示）
    */
-  async createOrder(openid: string, dto: CreateOrderDto): Promise<UnitelOrder> {
-    // 1. 生成订单号（使用时间戳 + nanoid 保证唯一性）
+  async createOrder(
+    openid: string,
+    dto: CreateOrderDto,
+  ): Promise<CreateOrderResult> {
+    // 1. 从缓存/API获取套餐详情（实时价格验证）
+    const packageDetail = await this.unitelApiService.findPackageByCode({
+      packageCode: dto.packageCode,
+      msisdn: dto.msisdn,
+      openid,
+      orderType: dto.orderType,
+    });
+
+    this.logger.info(
+      `套餐查询成功: ${packageDetail.code} - ${packageDetail.price} MNT`,
+    );
+
+    // 2. 获取当前汇率
+    const exchangeRateData = await this.exchangeRateService.getExchangeRate();
+    const exchangeRate = exchangeRateData.rate; // 字符串类型的汇率值
+
+    // 3. 计算人民币金额
+    const amountCny = Number(
+      (packageDetail.price / Number(exchangeRate)).toFixed(2),
+    );
+
+    // 4. 生成订单号
     const orderNo = `UNI${Date.now()}${nanoid(8).toUpperCase()}`;
 
-    // 2. 获取当前汇率（蒙古图格里克转人民币）
-    const exchangeRate = await this.exchangeRateService.getExchangeRate();
-
-    // 3. 创建订单
+    // 5. 创建订单（价格从后端获取，前端无法篡改）
     const order = await this.prisma.unitelOrder.create({
       data: {
         orderNo,
         openid,
         msisdn: dto.msisdn,
         orderType: dto.orderType,
-        amountMnt: dto.amountMnt,
-        amountCny: dto.amountCny,
+        amountMnt: packageDetail.price, // 使用后端验证的价格
+        amountCny,
         exchangeRate,
-        packageCode: dto.packageCode,
-        packageName: dto.packageName,
-        packageEngName: dto.packageEngName,
-        packageUnit: dto.packageUnit,
-        packageData: dto.packageData,
-        packageDays: dto.packageDays,
+        packageCode: packageDetail.code,
+        packageName: packageDetail.name,
+        packageEngName: packageDetail.engName,
+        packageUnit: packageDetail.unit,
+        packageData: packageDetail.data,
+        packageDays: packageDetail.days,
         paymentStatus: PaymentStatus.UNPAID,
         rechargeStatus: RechargeStatus.PENDING,
       },
     });
 
-    this.logger.info(`订单创建成功: ${orderNo}`);
-    return order;
+    this.logger.info(
+      `订单创建成功: ${orderNo} | 金额: ${packageDetail.price} MNT (${amountCny} CNY)`,
+    );
+
+    // 6. 返回订单（不含价格变动提示，因为总是使用最新价格）
+    return {
+      order,
+      priceChanged: false, // 默认无价格变动
+    };
   }
 
   /**
