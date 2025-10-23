@@ -1,4 +1,3 @@
-export * from './exchange-rate.module';
-export * from './exchange-rate.controller';
-export * from './services';
-export * from './dto';
+export { ExchangeRateModule } from './exchange-rate.module';
+export { ExchangeRateService } from './services/exchange-rate.service';
+export { ExchangeRateResponseDto } from './exchange-rate.dto';

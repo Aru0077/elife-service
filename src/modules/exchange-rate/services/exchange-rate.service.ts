@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { ExchangeRate } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { ExchangeRateResponseDto } from '../dto';
+import { ExchangeRateResponseDto } from '../exchange-rate.dto';
 
 /**
  * 汇率服务
+ * 提供汇率查询功能
  */
 @Injectable()
 export class ExchangeRateService {
@@ -14,41 +16,20 @@ export class ExchangeRateService {
    * 汇率固定为 440，换算公式: MNT / 440 = CNY
    */
   async getExchangeRate(): Promise<ExchangeRateResponseDto> {
-    const exchangeRate = await (this.prisma as any).exchangeRate.findUnique({
-      where: { id: 'MNT_CNY' },
-    });
+    const exchangeRate: ExchangeRate | null =
+      await this.prisma.exchangeRate.findUnique({
+        where: { id: 'MNT_CNY' },
+      });
 
     if (!exchangeRate) {
-      throw new Error('汇率信息不存在');
+      throw new NotFoundException('汇率信息不存在');
     }
 
     return {
-      id: exchangeRate.id as string,
-      rate: (exchangeRate.rate as { toString(): string }).toString(),
-      createdAt: exchangeRate.createdAt as Date,
-      updatedAt: exchangeRate.updatedAt as Date,
+      id: exchangeRate.id,
+      rate: exchangeRate.rate.toString(),
+      createdAt: exchangeRate.createdAt,
+      updatedAt: exchangeRate.updatedAt,
     };
-  }
-
-  /**
-   * 将蒙古国货币转换为人民币
-   * @param mntAmount 蒙古国货币金额
-   * @returns 人民币金额
-   */
-  async convertMntToCny(mntAmount: number): Promise<number> {
-    const exchangeRate = await this.getExchangeRate();
-    const rate = parseFloat(exchangeRate.rate);
-    return mntAmount / rate;
-  }
-
-  /**
-   * 将人民币转换为蒙古国货币
-   * @param cnyAmount 人民币金额
-   * @returns 蒙古国货币金额
-   */
-  async convertCnyToMnt(cnyAmount: number): Promise<number> {
-    const exchangeRate = await this.getExchangeRate();
-    const rate = parseFloat(exchangeRate.rate);
-    return cnyAmount * rate;
   }
 }

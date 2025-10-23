@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { ExchangeRateService } from './services';
-import { ExchangeRateResponseDto } from './dto';
+import { ExchangeRateService } from './services/exchange-rate.service';
+import { ExchangeRateResponseDto } from './exchange-rate.dto';
 
 /**
  * 汇率控制器
@@ -24,6 +24,6 @@ export class ExchangeRateController {
     type: ExchangeRateResponseDto,
   })
   async getExchangeRate(): Promise<ExchangeRateResponseDto> {
-    return this.exchangeRateService.getExchangeRate();
+    return await this.exchangeRateService.getExchangeRate();
   }
 }
