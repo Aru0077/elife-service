@@ -1,18 +1,18 @@
 /**
- * �Uu��Ӝ
+ * 订单列表返回结构
  */
 export interface OrderListResult<T> {
-  /** �Upn */
+  /** 订单数据 */
   data: T[];
-  /** u�o */
+  /** 分页信息 */
   pagination: {
-    /** SMu */
+    /** 当前页码 */
     page: number;
-    /** �up� */
+    /** 每页数量 */
     pageSize: number;
-    /** ;�Up */
+    /** 总记录数 */
     total: number;
-    /** ;up */
+    /** 总页数 */
     totalPages: number;
   };
 }

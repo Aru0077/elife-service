@@ -8,9 +8,8 @@ import { CreateOrderDto, QueryOrderDto } from '../dto';
 import { PaymentStatus, RechargeStatus } from '../enums';
 
 /**
- * Unitel �U
-�
- * L#�U CRUD ���
+ * Unitel 订单服务
+ * 负责处理订单相关的 CRUD 操作和业务逻辑
  */
 @Injectable()
 export class UnitelOrderService {
@@ -23,19 +22,19 @@ export class UnitelOrderService {
   }
 
   /**
-   * ��U
-   * @param openid (7 openid
-   * @param dto ��Upn
-   * @returns ���U
+   * 创建订单
+   * @param openid 用户的 openid
+   * @param dto 创建订单的数据
+   * @returns 新创建的订单
    */
   async createOrder(openid: string, dto: CreateOrderDto): Promise<UnitelOrder> {
-    // 1. �U�( nanoid16 MW&
+    // 1. 生成订单号（使用时间戳 + nanoid 保证唯一性）
     const orderNo = `UNI${Date.now()}${nanoid(8).toUpperCase()}`;
 
-    // 2. ��SMG�\:�g
+    // 2. 获取当前汇率（蒙古图格里克转人民币）
     const exchangeRate = await this.exchangeRateService.getExchangeRate();
 
-    // 3. ��U
+    // 3. 创建订单
     const order = await this.prisma.unitelOrder.create({
       data: {
         orderNo,
@@ -56,15 +55,15 @@ export class UnitelOrderService {
       },
     });
 
-    this.logger.info(`�U��: ${orderNo}`);
+    this.logger.info(`订单创建成功: ${orderNo}`);
     return order;
   }
 
   /**
-   * ��(7�Uh
-   * @param openid (7 openid
-   * @param dto ���p
-   * @returns �Uh�u�o
+   * 查询用户的订单列表
+   * @param openid 用户的 openid
+   * @param dto 查询参数
+   * @returns 订单列表和分页信息
    */
   async findUserOrders(openid: string, dto: QueryOrderDto) {
     const {
@@ -76,7 +75,7 @@ export class UnitelOrderService {
     } = dto;
     const skip = (page - 1) * pageSize;
 
-    // � ��a�
+    // 构建查询条件
     const where: Prisma.UnitelOrderWhereInput = {
       openid,
       ...(paymentStatus && { paymentStatus }),
@@ -84,7 +83,7 @@ export class UnitelOrderService {
       ...(orderType && { orderType }),
     };
 
-    // vL��Uh�;p
+    // 并行查询订单列表和总数
     const [orders, total] = await Promise.all([
       this.prisma.unitelOrder.findMany({
         where,
@@ -107,11 +106,10 @@ export class UnitelOrderService {
   }
 
   /**
-   * 9n�U���U
-   * @param orderNo �U�
-   * @returns �U��
-   * @throws NotFoundException �U
-X(
+   * 根据订单号查询订单
+   * @param orderNo 订单号
+   * @returns 订单详情
+   * @throws NotFoundException 订单不存在时抛出
    */
   async findByOrderNo(orderNo: string): Promise<UnitelOrder> {
     const order = await this.prisma.unitelOrder.findUnique({
@@ -119,17 +117,16 @@ X(
     });
 
     if (!order) {
-      throw new NotFoundException(`�U
-X(: ${orderNo}`);
+      throw new NotFoundException(`订单不存在: ${orderNo}`);
     }
 
     return order;
   }
 
   /**
-   * ��/ض
-   * @param orderNo �U�
-   * @param paymentStatus /ض
+   * 更新支付状态
+   * @param orderNo 订单号
+   * @param paymentStatus 支付状态
    */
   async updatePaymentStatus(
     orderNo: string,
@@ -143,15 +140,15 @@ X(: ${orderNo}`);
       },
     });
 
-    this.logger.info(`�U ${orderNo} /ض��:: ${paymentStatus}`);
+    this.logger.info(`订单 ${orderNo} 支付状态已更新: ${paymentStatus}`);
     return order;
   }
 
   /**
-   * ��E<�
-   * @param orderNo �U�
-   * @param rechargeStatus E<�
-   * @param apiResponse Unitel API ͔pn�
+   * 更新充值状态
+   * @param orderNo 订单号
+   * @param rechargeStatus 充值状态
+   * @param apiResponse Unitel API 响应数据（可选）
    */
   async updateRechargeStatus(
     orderNo: string,
@@ -187,7 +184,7 @@ X(: ${orderNo}`);
       },
     });
 
-    this.logger.info(`�U ${orderNo} E<���:: ${rechargeStatus}`);
+    this.logger.info(`订单 ${orderNo} 充值状态已更新: ${rechargeStatus}`);
     return order;
   }
 }

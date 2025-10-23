@@ -2,52 +2,50 @@ import { IsString, IsEnum, IsNumber, IsOptional, Min } from 'class-validator';
 import { OrderType } from '../enums';
 
 /**
- * ��U DTO
+ * 创建订单 DTO
  */
 export class CreateOrderDto {
-  /** K:� */
+  /** 手机号 */
   @IsString()
   msisdn: string;
 
-  /** �U{� */
+  /** 订单类型 */
   @IsEnum(OrderType)
   orderType: OrderType;
 
-  /** W� */
+  /** 套餐编码 */
   @IsString()
   packageCode: string;
 
-  /** W
-����	 */
+  /** 套餐名称（蒙古语） */
   @IsString()
   packageName: string;
 
-  /** W�
-� */
+  /** 套餐英文名称 */
   @IsString()
   packageEngName: string;
 
-  /** ���'ѝ(MNT) */
+  /** 套餐金额（蒙古图格里克，MNT） */
   @IsNumber()
   @Min(0)
   amountMnt: number;
 
-  /** �ѝ(CNY) */
+  /** 人民币金额（CNY） */
   @IsNumber()
   @Min(0)
   amountCny: number;
 
-  /** �9UM�9E<��k	 */
+  /** 话费单位（仅充值类型订单需要） */
   @IsOptional()
   @IsNumber()
   packageUnit?: number;
 
-  /** A�'A�E<��k�"3GB"	 */
+  /** 流量大小（仅流量类型订单需要，如"3GB"） */
   @IsOptional()
   @IsString()
   packageData?: string;
 
-  /** 	H)pA�E<��k	 */
+  /** 有效天数（仅流量类型订单需要） */
   @IsOptional()
   @IsNumber()
   packageDays?: number;
