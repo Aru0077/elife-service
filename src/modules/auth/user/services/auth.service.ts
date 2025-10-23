@@ -39,8 +39,7 @@ export class AuthService {
 
     // 3. 生成 JWT token
     const payload: JwtPayload = {
-      sub: openid,
-      openid: openid,
+      sub: openid, // JWT 标准字段，存储用户 openid
     };
 
     const access_token = this.jwtService.sign(payload);

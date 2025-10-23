@@ -38,7 +38,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * @returns 用户信息（会被挂载到 request.user）
    */
   async validate(payload: JwtPayload): Promise<User> {
-    const { openid } = payload;
+    const openid = payload.sub; // 从 JWT 标准字段 sub 中提取 openid
 
     if (!openid) {
       throw new UnauthorizedException('无效的token');
