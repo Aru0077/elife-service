@@ -8,7 +8,7 @@ import { PrismaModule } from '@/prisma/prisma.module';
 import { WechatApiService, AuthService } from './services';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UserAuthController } from './user-auth.controller';
-
+import type { StringValue } from 'ms';
 /**
  * 用户认证模块
  * 提供微信授权登录和JWT认证功能
@@ -35,7 +35,8 @@ import { UserAuthController } from './user-auth.controller';
         return {
           secret,
           signOptions: {
-            expiresIn: (config.get<string>('jwt.expiresIn') || '7d') as string,
+            expiresIn: (config.get<string>('jwt.expiresIn') ||
+              '7d') as StringValue,
           },
         };
       },

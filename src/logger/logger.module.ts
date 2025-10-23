@@ -79,7 +79,7 @@ import { randomUUID } from 'crypto';
             // 序列化配置
             serializers: {
               req: (req) => ({
-                id: (req as any).id,
+                id: req.id,
                 method: req.method,
                 url: req.url,
                 // 精简模式：只记录关键 headers
