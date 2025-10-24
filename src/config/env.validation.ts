@@ -27,6 +27,14 @@ export const validationSchema = Joi.object({
   WECHAT_APPID: Joi.string().required(),
   WECHAT_SECRET: Joi.string().required(),
 
+  // 微信支付配置
+  WECHAT_PAY_MCHID: Joi.string().required(),
+  WECHAT_PAY_SERIAL_NO: Joi.string().required(),
+  WECHAT_PAY_PRIVATE_KEY: Joi.string().required(), // Base64编码的商户私钥
+  WECHAT_PAY_APIV3_KEY: Joi.string().length(32).required(), // 32字符的APIv3密钥
+  WECHAT_PAY_NOTIFY_URL: Joi.string().uri().required(), // 支付回调URL
+  WECHAT_PAY_REFUND_NOTIFY_URL: Joi.string().uri().optional(), // 退款回调URL（可选）
+
   // JWT 配置
   JWT_SECRET: Joi.string().min(32).required(),
   JWT_EXPIRES_IN: Joi.string().default('7d'),

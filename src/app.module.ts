@@ -11,6 +11,7 @@ import { ThrottlerBehindProxyGuard } from '@/common/guards/throttler-behind-prox
 import { ExchangeRateModule } from '@/modules/exchange-rate';
 import { UnitelModule } from '@/modules/operators/unitel/unitel.module';
 import { UserAuthModule } from '@/modules/auth/user/user-auth.module';
+import { WechatPayModule } from '@/modules/payment/wechat-pay';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { UserAuthModule } from '@/modules/auth/user/user-auth.module';
     ExchangeRateModule,
     UnitelModule,
     UserAuthModule, // 用户认证模块
+    WechatPayModule, // 微信支付模块
   ],
   providers: [
     {
