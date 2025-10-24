@@ -5,7 +5,7 @@ import { AxiosError, AxiosResponse } from 'axios';
 import { firstValueFrom } from 'rxjs';
 import { PinoLogger } from 'nestjs-pino';
 import { randomUUID } from 'crypto';
-import unitelConfig from '../config/unitel.config';
+import unitelConfig, { UNITEL_ENDPOINTS } from '../config/unitel.config';
 import { RedisService } from '@/redis/redis.service';
 import { ThirdPartyLoggerService } from '@/logger/services/third-party-logger.service';
 import {
@@ -88,7 +88,7 @@ export class UnitelApiService {
       // 调用 /auth
       const response = await firstValueFrom(
         this.httpService.post<TokenResponse>(
-          `${this.config.baseUrl}/auth`,
+          `${this.config.baseUrl}${UNITEL_ENDPOINTS.AUTH}`,
           null,
           {
             headers: {
@@ -242,10 +242,14 @@ export class UnitelApiService {
    * @returns 资费列表（包含话费和流量套餐）
    */
   async getServiceType(msisdn: string): Promise<ServiceTypeResponse> {
-    return this.request<ServiceTypeResponse>('POST', '/service/servicetype', {
-      msisdn,
-      info: '1',
-    });
+    return this.request<ServiceTypeResponse>(
+      'POST',
+      UNITEL_ENDPOINTS.SERVICE_TYPE,
+      {
+        msisdn,
+        info: '1',
+      },
+    );
   }
 
   /**
@@ -256,7 +260,7 @@ export class UnitelApiService {
    * @returns 账单信息
    */
   async getInvoice(msisdn: string): Promise<InvoiceResponse> {
-    return this.request<InvoiceResponse>('POST', '/service/unitel', {
+    return this.request<InvoiceResponse>('POST', UNITEL_ENDPOINTS.INVOICE, {
       owner: msisdn,
       msisdn,
     });
@@ -272,7 +276,11 @@ export class UnitelApiService {
   async rechargeBalance(
     params: RechargeBalanceParams,
   ): Promise<RechargeResponse> {
-    return this.request<RechargeResponse>('POST', '/service/recharge', params);
+    return this.request<RechargeResponse>(
+      'POST',
+      UNITEL_ENDPOINTS.RECHARGE,
+      params,
+    );
   }
 
   /**
@@ -285,7 +293,7 @@ export class UnitelApiService {
   async rechargeData(params: RechargeDataParams): Promise<RechargeResponse> {
     return this.request<RechargeResponse>(
       'POST',
-      '/service/datapackage',
+      UNITEL_ENDPOINTS.DATA_PACKAGE,
       params,
     );
   }
@@ -298,7 +306,11 @@ export class UnitelApiService {
    * @returns 支付结果
    */
   async payInvoice(params: PayInvoiceParams): Promise<PaymentResponse> {
-    return this.request<PaymentResponse>('POST', '/service/payment', params);
+    return this.request<PaymentResponse>(
+      'POST',
+      UNITEL_ENDPOINTS.PAYMENT,
+      params,
+    );
   }
 
   // ========== 缓存层方法（安全价格验证） ==========

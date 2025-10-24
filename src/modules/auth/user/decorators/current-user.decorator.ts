@@ -1,5 +1,13 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { User } from '@prisma/client';
+import { Request } from 'express';
+
+/**
+ * 扩展的 Request 接口，包含已认证的用户信息
+ */
+interface RequestWithUser extends Request {
+  user: User;
+}
 
 /**
  * 当前用户装饰器
@@ -21,8 +29,8 @@ import { User } from '@prisma/client';
  */
 export const CurrentUser = createParamDecorator(
   (data: keyof User | undefined, ctx: ExecutionContext) => {
-    const request = ctx.switchToHttp().getRequest();
-    const user = request.user as User;
+    const request = ctx.switchToHttp().getRequest<RequestWithUser>();
+    const user = request.user;
 
     // 如果指定了字段名,返回该字段的值
     if (data) {
