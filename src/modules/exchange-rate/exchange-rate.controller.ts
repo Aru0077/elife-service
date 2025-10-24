@@ -8,7 +8,7 @@ import { ExchangeRateResponseDto } from './exchange-rate.dto';
  * 提供公开的汇率查询接口
  */
 @ApiTags('汇率')
-@Controller('api/exchange-rate')
+@Controller('exchange-rate')
 export class ExchangeRateController {
   constructor(private readonly exchangeRateService: ExchangeRateService) {}
 

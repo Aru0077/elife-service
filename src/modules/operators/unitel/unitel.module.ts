@@ -9,6 +9,7 @@ import { UnitelApiService } from './services';
 import { UnitelOrderService } from './services/unitel-order.service';
 import { UnitelOrderController } from './controllers/unitel-order.controller';
 import { UnitelServiceController } from './controllers/unitel-service.controller';
+import { LoggerModule } from '@/logger/logger.module';
 
 /**
  * Unitel 运营商模块
@@ -30,6 +31,9 @@ import { UnitelServiceController } from './controllers/unitel-service.controller
 
     // 汇率模块（用于汇率转换）
     ExchangeRateModule,
+
+    // 日志模块（用于记录日志）
+    LoggerModule,
   ],
   controllers: [UnitelOrderController, UnitelServiceController],
   providers: [UnitelApiService, UnitelOrderService],
