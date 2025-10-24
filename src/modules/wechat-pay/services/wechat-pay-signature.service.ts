@@ -84,7 +84,7 @@ export class WechatPaySignatureService {
       body, // 请求体（原始JSON）
     ].join('\n');
 
-    const _message = signatureStr + '\n';
+    const message = signatureStr + '\n';
 
     // 2. 验证签名
     // TODO: 实际生产环境需要使用微信支付平台证书公钥进行验证

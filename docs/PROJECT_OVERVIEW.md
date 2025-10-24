@@ -579,6 +579,25 @@ elife-service项目下一步计划：实现微信授权登录，jwt，设计unit
 
 注意事项：不能重复请求第三方api，例如获取token，进行充值等api。尤其禁止重复充值。
 
+
+https://pay.weixin.qq.com/doc/v3/merchant/4012062524
+https://pay.weixin.qq.com/doc/v3/merchant/4015423216
+https://pay.weixin.qq.com/doc/v3/merchant/4012791870
+https://pay.weixin.qq.com/doc/v3/merchant/4012791856
+https://pay.weixin.qq.com/doc/v3/merchant/4012791857
+https://pay.weixin.qq.com/doc/v3/merchant/4012791858
+https://pay.weixin.qq.com/doc/v3/merchant/4012791859
+https://pay.weixin.qq.com/doc/v3/merchant/4012791860
+https://pay.weixin.qq.com/doc/v3/merchant/4012791861
+https://pay.weixin.qq.com/doc/v3/merchant/4012791862
+https://pay.weixin.qq.com/doc/v3/merchant/4012791863
+https://pay.weixin.qq.com/doc/v3/merchant/4012791864
+https://pay.weixin.qq.com/doc/v3/merchant/4012791865
+https://pay.weixin.qq.com/doc/v3/merchant/4012791866
+https://pay.weixin.qq.com/doc/v3/merchant/4012791867
+https://pay.weixin.qq.com/doc/v3/merchant/4012791868
+以上是微信支付jsapi的官方文档网址，
+
 **最后更新**: 2025-10-22
 **文档版本**: 2.0.0
 **项目版本**: 0.0.1
