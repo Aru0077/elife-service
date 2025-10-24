@@ -6,11 +6,17 @@ import {
   Query,
   Body,
   UseGuards,
-  Request,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '@/modules/auth/user/guards/jwt-auth.guard';
+import { CurrentUser } from '@/modules/auth/user/decorators/current-user.decorator';
 import { UnitelOrderService } from '../services/unitel-order.service';
-import { CreateOrderDto, QueryOrderDto } from '../dto';
+import {
+  QueryOrderDto,
+  RechargeBalanceDto,
+  RechargeDataDto,
+  PayInvoiceDto,
+} from '../dto';
+import { OrderType } from '../enums';
 
 /**
  * Unitel 订单控制器
@@ -22,16 +28,51 @@ export class UnitelOrderController {
   constructor(private readonly orderService: UnitelOrderService) {}
 
   /**
-   * 创建订单
-   * POST /operators/unitel/orders
+   * 话费充值订单
+   * POST /operators/unitel/orders/balance
    */
-  @Post()
-  async createOrder(
-    @Request() req: { user: { openid: string } },
-    @Body() dto: CreateOrderDto,
+  @Post('balance')
+  async rechargeBalance(
+    @CurrentUser('openid') openid: string,
+    @Body() dto: RechargeBalanceDto,
   ) {
-    const openid = req.user.openid; // JWT 验证后用户信息存储在 req.user
-    return this.orderService.createOrder(openid, dto);
+    return this.orderService.createOrder(openid, {
+      msisdn: dto.msisdn,
+      orderType: OrderType.BALANCE,
+      packageCode: dto.packageCode,
+    });
+  }
+
+  /**
+   * 流量充值订单
+   * POST /operators/unitel/orders/data
+   */
+  @Post('data')
+  async rechargeData(
+    @CurrentUser('openid') openid: string,
+    @Body() dto: RechargeDataDto,
+  ) {
+    return this.orderService.createOrder(openid, {
+      msisdn: dto.msisdn,
+      orderType: OrderType.DATA,
+      packageCode: dto.packageCode,
+    });
+  }
+
+  /**
+   * 账单支付订单
+   * POST /operators/unitel/orders/invoice
+   */
+  @Post('invoice')
+  async payInvoice(
+    @CurrentUser('openid') openid: string,
+    @Body() dto: PayInvoiceDto,
+  ) {
+    return this.orderService.createOrder(openid, {
+      msisdn: dto.msisdn,
+      orderType: OrderType.INVOICE_PAYMENT,
+      packageCode: dto.invoiceDate, // 账单支付时使用 invoiceDate 作为 packageCode
+    });
   }
 
   /**
@@ -40,10 +81,9 @@ export class UnitelOrderController {
    */
   @Get()
   async getUserOrders(
-    @Request() req: { user: { openid: string } },
+    @CurrentUser('openid') openid: string,
     @Query() dto: QueryOrderDto,
   ) {
-    const openid = req.user.openid;
     return this.orderService.findUserOrders(openid, dto);
   }
 

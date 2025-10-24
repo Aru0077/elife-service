@@ -3,13 +3,6 @@ import { User } from '@prisma/client';
 import { Request } from 'express';
 
 /**
- * 扩展的 Request 接口，包含已认证的用户信息
- */
-interface RequestWithUser extends Request {
-  user: User;
-}
-
-/**
  * 当前用户装饰器
  * 用于从请求中提取当前已认证的用户信息
  *
@@ -29,7 +22,7 @@ interface RequestWithUser extends Request {
  */
 export const CurrentUser = createParamDecorator(
   (data: keyof User | undefined, ctx: ExecutionContext) => {
-    const request = ctx.switchToHttp().getRequest<RequestWithUser>();
+    const request = ctx.switchToHttp().getRequest<Request>();
     const user = request.user;
 
     // 如果指定了字段名,返回该字段的值
