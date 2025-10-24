@@ -363,12 +363,10 @@ export class UnitelApiService {
     const data = await apiFetcher();
 
     // 4. 保存到Redis（3分钟TTL）
-    await this.redisService.set(
-      cacheKey,
-      JSON.stringify(data),
-      this.CACHE_TTL,
+    await this.redisService.set(cacheKey, JSON.stringify(data), this.CACHE_TTL);
+    this.logger.info(
+      `${dataDescription}已缓存: ${cacheKey} (TTL: ${this.CACHE_TTL}s)`,
     );
-    this.logger.info(`${dataDescription}已缓存: ${cacheKey} (TTL: ${this.CACHE_TTL}s)`);
 
     return data;
   }
