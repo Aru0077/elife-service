@@ -20,7 +20,7 @@ export class UnitelServiceController {
   constructor(private readonly unitelApiService: UnitelApiService) {}
 
   /**
-   * 获取服务类型(带缓存)
+   * 获取资费列表(带缓存)
    * POST /operators/unitel/service-types
    *
    * 缓存策略:
@@ -33,7 +33,7 @@ export class UnitelServiceController {
    * @returns 服务类型列表信息
    */
   @Post('service-types')
-  async getServiceTypes(
+  getServiceTypes(
     @CurrentUser('openid') openid: string,
     @Body() dto: GetServiceTypeDto,
   ) {
