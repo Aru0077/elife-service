@@ -1,4 +1,5 @@
-import * as ALY from '@alicloud/log';
+import Client from '@alicloud/log';
+import { Writable } from 'stream';
 import type { SlsLogGroup, SlsLogItem } from '../interfaces/logger.interface';
 
 /**
@@ -18,7 +19,7 @@ export interface SlsTransportConfig {
  * 将 Pino 日志批量上传到阿里云日志服务
  */
 export class SlsTransport {
-  private client: ALY.default | null = null;
+  private client: Client | null = null;
   private buffer: SlsLogItem[] = [];
   private flushTimer: NodeJS.Timeout | null = null;
   private readonly BUFFER_SIZE = 100; // 批量上传阈值
@@ -56,10 +57,10 @@ export class SlsTransport {
    */
   private initializeClient(): void {
     try {
-      this.client = new ALY.default({
+      this.client = new Client({
         accessKeyId: this.config.accessKeyId,
         accessKeySecret: this.config.accessKeySecret,
-        endpoint: `https://${this.config.endpoint}`,
+        endpoint: this.config.endpoint,
       });
       console.log('[SLS Transport] 阿里云 SLS 客户端初始化成功');
     } catch (error) {
@@ -102,23 +103,25 @@ export class SlsTransport {
    * 格式化日志项
    */
   private formatLogItem(logObject: Record<string, unknown>): SlsLogItem {
-    const contents: Array<{ key: string; value: string }> = [];
+    const content: Record<string, string> = {};
 
     // 遍历日志对象，转换为 key-value 格式
     for (const [key, value] of Object.entries(logObject)) {
       // 跳过 time 字段，单独处理
       if (key === 'time') continue;
 
-      // 转换为字符串
-      const stringValue =
-        typeof value === 'object' ? JSON.stringify(value) : String(value);
-
-      contents.push({ key, value: stringValue });
+      // 转换为字符串（对象类型进行 JSON 序列化）
+      content[key] =
+        typeof value === 'object' && value !== null
+          ? JSON.stringify(value)
+          : String(value);
     }
 
     return {
-      time: Math.floor((logObject.time as number) / 1000) || Date.now(), // 转换为秒级时间戳
-      contents,
+      timestamp:
+        Math.floor((logObject.time as number) / 1000) ||
+        Math.floor(Date.now() / 1000),
+      content,
     };
   }
 
@@ -140,11 +143,11 @@ export class SlsTransport {
         source: 'elife-service',
       };
 
-      await this.client.putLogs({
-        projectName: this.config.project,
-        logStoreName: this.config.logstore,
+      await this.client.postLogStoreLogs(
+        this.config.project,
+        this.config.logstore,
         logGroup,
-      });
+      );
 
       console.log(`[SLS Transport] 成功上传 ${logs.length} 条日志到 SLS`);
     } catch (error) {
@@ -179,13 +182,10 @@ export class SlsTransport {
 /**
  * 创建 SLS Transport 流（用于 Pino）
  */
-export function createSlsTransportStream(
-  config: SlsTransportConfig,
-): NodeJS.WritableStream {
+export function createSlsTransportStream(config: SlsTransportConfig): Writable {
   const transport = new SlsTransport(config);
 
   // 创建可写流
-  const { Writable } = require('stream');
   const stream = new Writable({
     objectMode: true,
     write(

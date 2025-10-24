@@ -199,16 +199,16 @@ export class UnitelOrderService {
       where: { orderNo },
       data: {
         rechargeStatus,
-        ...(apiResponse?.svId && { svId: apiResponse.svId }),
-        ...(apiResponse?.seq && { seq: apiResponse.seq }),
-        ...(apiResponse?.apiResult && { apiResult: apiResponse.apiResult }),
-        ...(apiResponse?.apiCode && { apiCode: apiResponse.apiCode }),
-        ...(apiResponse?.apiMsg && { apiMsg: apiResponse.apiMsg }),
-        ...(apiResponse?.apiRaw && { apiRaw: apiResponse.apiRaw }),
-        ...(apiResponse?.errorCode && { errorCode: apiResponse.errorCode }),
-        ...(apiResponse?.errorMessage && {
-          errorMessage: apiResponse.errorMessage,
-        }),
+        ...(apiResponse?.svId ? { svId: apiResponse.svId } : {}),
+        ...(apiResponse?.seq ? { seq: apiResponse.seq } : {}),
+        ...(apiResponse?.apiResult ? { apiResult: apiResponse.apiResult } : {}),
+        ...(apiResponse?.apiCode ? { apiCode: apiResponse.apiCode } : {}),
+        ...(apiResponse?.apiMsg ? { apiMsg: apiResponse.apiMsg } : {}),
+        ...(apiResponse?.apiRaw ? { apiRaw: apiResponse.apiRaw } : {}),
+        ...(apiResponse?.errorCode ? { errorCode: apiResponse.errorCode } : {}),
+        ...(apiResponse?.errorMessage
+          ? { errorMessage: apiResponse.errorMessage }
+          : {}),
         ...(rechargeStatus === RechargeStatus.SUCCESS && {
           completedAt: new Date(),
         }),

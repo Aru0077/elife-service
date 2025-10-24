@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigType } from '@nestjs/config';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
+import pino from 'pino';
+import pinoPretty from 'pino-pretty';
+import type { IncomingMessage, ServerResponse } from 'http';
 import loggerConfig from './config/logger.config';
 import { ThirdPartyLoggerService } from './services/third-party-logger.service';
 import { createSlsTransportStream } from './transports/sls.transport';
@@ -21,10 +24,8 @@ import { randomUUID } from 'crypto';
         // 控制台输出
         if (config.pretty) {
           // 开发环境：美化输出
-          const pino = require('pino');
-          const pretty = require('pino-pretty');
           streams.push({
-            stream: pretty({
+            stream: pinoPretty({
               colorize: true,
               translateTime: 'SYS:yyyy-mm-dd HH:MM:ss',
               ignore: 'pid,hostname',
@@ -50,26 +51,34 @@ import { randomUUID } from 'crypto';
             level: config.level,
             // 自动日志记录配置（精简模式）
             autoLogging: {
-              ignore: (req) => {
+              ignore: (req: IncomingMessage) => {
                 // 忽略健康检查接口
                 return req.url?.includes('/health') || false;
               },
             },
             // 自定义请求日志格式
-            customProps: (req) => ({
-              traceId: (req as any).id || randomUUID(),
-              userAgent: req.headers?.['user-agent'] || 'unknown',
-            }),
+            customProps: (req: IncomingMessage & { id?: string | number }) => {
+              const userAgentHeader = req.headers['user-agent'] as
+                | string
+                | string[]
+                | undefined;
+              return {
+                traceId: String(req.id || randomUUID()),
+                userAgent: Array.isArray(userAgentHeader)
+                  ? userAgentHeader[0] || 'unknown'
+                  : userAgentHeader || 'unknown',
+              };
+            },
             // 自定义日志格式
-            customLogLevel: (_req: unknown, res: { statusCode: number }) => {
+            customLogLevel: (_req: IncomingMessage, res: ServerResponse) => {
               if (res.statusCode >= 500) return 'error';
               if (res.statusCode >= 400) return 'warn';
               return 'info';
             },
             // 仅记录错误的请求体
             customSuccessMessage: (
-              _req: unknown,
-              res: { statusCode: number },
+              _req: IncomingMessage,
+              res: ServerResponse,
             ) => {
               if (res.statusCode >= 400) {
                 return `Request failed with status ${res.statusCode}`;
@@ -78,29 +87,29 @@ import { randomUUID } from 'crypto';
             },
             // 序列化配置
             serializers: {
-              req: (req) => ({
+              req: (req: IncomingMessage & { id?: string }) => ({
                 id: req.id,
                 method: req.method,
                 url: req.url,
                 // 精简模式：只记录关键 headers
                 headers: {
-                  'user-agent': req.headers?.['user-agent'],
-                  'content-type': req.headers?.['content-type'],
+                  'user-agent': req.headers['user-agent'],
+                  'content-type': req.headers['content-type'],
                 },
               }),
-              res: (res) => ({
+              res: (res: ServerResponse) => ({
                 statusCode: res.statusCode,
               }),
-              err: (err) => ({
+              err: (err: Error) => ({
                 type: err.name,
                 message: err.message,
-                stack: (err as Error).stack,
+                stack: err.stack,
               }),
             },
             // 使用多流
             stream:
               streams.length > 1
-                ? require('pino').multistream(streams)
+                ? pino.multistream(streams)
                 : streams[0].stream,
           },
         };

@@ -2,11 +2,9 @@
  * 阿里云 SLS 日志格式
  */
 export interface SlsLogItem {
-  time: number; // Unix 时间戳（秒）
-  contents: Array<{
-    key: string;
-    value: string;
-  }>;
+  timestamp: number; // Unix 时间戳（秒）
+  content: Record<string, string>; // 日志内容键值对
+  timestampNsPart?: number; // 可选的纳秒部分
 }
 
 /**
@@ -16,10 +14,7 @@ export interface SlsLogGroup {
   logs: SlsLogItem[];
   topic?: string;
   source?: string;
-  tags?: Array<{
-    key: string;
-    value: string;
-  }>;
+  tags?: Record<string, string>[];
 }
 
 /**
