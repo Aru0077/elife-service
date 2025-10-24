@@ -1,6 +1,12 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { User } from '@prisma/client';
-import { Request } from 'express';
+
+/**
+ * 扩展Express Request类型
+ */
+interface RequestWithUser {
+  user?: User;
+}
 
 /**
  * 当前用户装饰器
@@ -22,12 +28,12 @@ import { Request } from 'express';
  */
 export const CurrentUser = createParamDecorator(
   (data: keyof User | undefined, ctx: ExecutionContext) => {
-    const request = ctx.switchToHttp().getRequest<Request>();
+    const request = ctx.switchToHttp().getRequest<RequestWithUser>();
     const user = request.user;
 
     // 如果指定了字段名,返回该字段的值
-    if (data) {
-      return user?.[data];
+    if (data && user) {
+      return user[data];
     }
 
     // 否则返回整个用户对象

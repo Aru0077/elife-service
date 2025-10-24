@@ -365,9 +365,11 @@ const packageDetail = await this.unitelApiService.getServiceType(msisdn);
 | 决策 | 方案 | 核心理由 | 权衡 |
 |------|------|---------|------|
 | 订单模型 | 独立表 | 故障隔离 + 快速扩展 | 跨运营商查询需聚合服务 |
-| 缓存方案 | Redis 5分钟 | 防篡改 + 减少 API 调用 | 缓存过期需重新查询 |
+| 缓存方案 | Redis 3分钟 | 防篡改 + 减少 API 调用 | 缓存过期需重新查询 |
 | 价格验证 | 后端验证 | 前端不可信 | 前端不传价格字段 |
 | 扩展策略 | 模板复制 | 零耦合,快速扩展 | 一定代码重复 |
+| 订单端点 | 单一端点 | API简洁统一 | 前端需传orderType参数 |
+| 缓存类型 | 枚举标识 | 类型安全,易扩展 | 需维护枚举定义 |
 
 ---
 
@@ -391,10 +393,86 @@ const packageDetail = await this.unitelApiService.getServiceType(msisdn);
 
 ## 📚 相关文档
 
-- [资费缓存与价格防篡改](./PRICE_CACHE_SECURITY.md) - 详细技术实现
-- [Unitel 订单模块总结](./unitel-order-module-summary.md) - 订单模块实现
-- [架构设计文档](./architecture-plan.md) - 整体架构
+- [项目总览](./PROJECT_OVERVIEW.md) - 项目整体介绍
+- [Unitel API 模块](./UNITEL_API_MODULE.md) - API封装详细设计
 - [模块结构设计](./MODULE_STRUCTURE_DESIGN.md) - 目录结构规范
+- [最佳实践](./BEST_PRACTICES.md) - 开发规范
+- [API版本管理](./API_VERSIONING.md) - API版本控制
+- [限流配置](./RATE_LIMITING.md) - 请求限流
+
+---
+
+## 🔄 优化历史
+
+### 2025-10-24 优化记录
+
+#### 优化目标
+1. 简化订单创建接口
+2. 统一缓存逻辑
+3. 优化缓存TTL
+
+#### 具体改动
+
+**1. 创建订单端点简化**
+- **变更前**: 3个独立端点 (`/orders/balance`, `/orders/data`, `/orders/invoice`)
+- **变更后**: 单一端点 (`/orders`)
+- **优势**: API更简洁，减少3个DTO文件，代码量减少约30%
+
+**2. 缓存逻辑重构**
+```typescript
+// 新增 UnitelCacheType 枚举
+enum UnitelCacheType {
+  SERVICE_TYPES = 'service_types',  // 资费列表
+  INVOICE = 'invoice',               // 账单信息
+}
+
+// 通用缓存方法
+private async getCachedData<T>(
+  cacheType: UnitelCacheType,
+  msisdn: string,
+  openid: string,
+  apiFetcher: () => Promise<T>,
+  dataDescription: string,
+): Promise<T>
+```
+
+**优势**:
+- 代码复用: 两个缓存方法合并为一个通用方法
+- 类型安全: 使用枚举代替字符串魔法值
+- 易扩展: 添加新缓存类型只需扩展枚举
+
+**3. 缓存TTL优化**
+- **变更**: 从5分钟（300秒）改为3分钟（180秒）
+- **理由**: 价格更新更及时，同时仍能有效减少API调用
+
+**4. 缓存键格式**
+```
+资费列表: unitel:service_types:{openid}:{msisdn}
+账单信息: unitel:invoice:{openid}:{msisdn}
+```
+
+#### 影响范围
+- 新建文件: 1个 (cache-type.enum.ts)
+- 删除文件: 3个 (recharge-balance/data/pay-invoice.dto.ts)
+- 修改文件: 4个
+- 代码量: 减少约80行
+
+#### API变更
+**前端调用方式**:
+```typescript
+// 变更前: 三个端点
+POST /api/operators/unitel/orders/balance
+POST /api/operators/unitel/orders/data
+POST /api/operators/unitel/orders/invoice
+
+// 变更后: 单一端点 + orderType参数
+POST /api/operators/unitel/orders
+Body: {
+  msisdn: "88616609",
+  orderType: "balance" | "data" | "invoice_payment",
+  packageCode: "SD5000"
+}
+```
 
 ---
 
@@ -405,10 +483,11 @@ const packageDetail = await this.unitelApiService.getServiceType(msisdn);
 3. **安全第一** - 价格验证等安全机制不妥协
 4. **可观察性** - 设计支持监控和调试
 5. **渐进式优化** - 先运行,再根据实际情况优化
+6. **类型安全** - 使用枚举和接口确保类型正确性
 
 ---
 
-**文档版本**: 1.0.0
+**文档版本**: 1.1.0
 **最后更新**: 2025-10-24
 **维护者**: 开发团队
 **审核状态**: ✅ 已通过技术评审

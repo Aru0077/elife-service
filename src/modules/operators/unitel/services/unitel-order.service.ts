@@ -190,7 +190,7 @@ export class UnitelOrderService {
       apiResult?: string;
       apiCode?: string;
       apiMsg?: string;
-      apiRaw?: any;
+      apiRaw?: Prisma.JsonValue;
       errorCode?: string;
       errorMessage?: string;
     },

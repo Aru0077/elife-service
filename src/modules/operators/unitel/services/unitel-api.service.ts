@@ -355,7 +355,7 @@ export class UnitelApiService {
     const cached = await this.redisService.get(cacheKey);
     if (cached) {
       this.logger.debug(`使用缓存的${dataDescription}: ${cacheKey}`);
-      return JSON.parse(cached);
+      return JSON.parse(cached) as T;
     }
 
     // 3. 缓存miss，调用API获取
