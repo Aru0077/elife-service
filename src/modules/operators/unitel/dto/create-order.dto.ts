@@ -10,7 +10,12 @@ export class CreateOrderDto {
   @IsString()
   msisdn: string;
 
-  /** 订单类型 */
+  /**
+   * 订单类型（必填）
+   * - balance: 话费充值
+   * - data: 流量充值
+   * - invoice_payment: 账单支付
+   */
   @IsEnum(OrderType)
   orderType: OrderType;
 

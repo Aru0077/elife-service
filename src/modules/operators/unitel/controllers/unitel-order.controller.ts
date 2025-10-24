@@ -10,13 +10,7 @@ import {
 import { JwtAuthGuard } from '@/modules/auth/user/guards/jwt-auth.guard';
 import { CurrentUser } from '@/modules/auth/user/decorators/current-user.decorator';
 import { UnitelOrderService } from '../services/unitel-order.service';
-import {
-  QueryOrderDto,
-  RechargeBalanceDto,
-  RechargeDataDto,
-  PayInvoiceDto,
-} from '../dto';
-import { OrderType } from '../enums';
+import { QueryOrderDto, CreateOrderDto } from '../dto';
 
 /**
  * Unitel 订单控制器
@@ -28,51 +22,22 @@ export class UnitelOrderController {
   constructor(private readonly orderService: UnitelOrderService) {}
 
   /**
-   * 话费充值订单
-   * POST /operators/unitel/orders/balance
+   * 创建订单（统一端点）
+   * POST /operators/unitel/orders
+   *
+   * 前端传递参数:
+   * {
+   *   "msisdn": "88616609",
+   *   "orderType": "balance" | "data" | "invoice_payment",
+   *   "packageCode": "SD5000" (或账单日期)
+   * }
    */
-  @Post('balance')
-  async rechargeBalance(
+  @Post()
+  async createOrder(
     @CurrentUser('openid') openid: string,
-    @Body() dto: RechargeBalanceDto,
+    @Body() dto: CreateOrderDto,
   ) {
-    return this.orderService.createOrder(openid, {
-      msisdn: dto.msisdn,
-      orderType: OrderType.BALANCE,
-      packageCode: dto.packageCode,
-    });
-  }
-
-  /**
-   * 流量充值订单
-   * POST /operators/unitel/orders/data
-   */
-  @Post('data')
-  async rechargeData(
-    @CurrentUser('openid') openid: string,
-    @Body() dto: RechargeDataDto,
-  ) {
-    return this.orderService.createOrder(openid, {
-      msisdn: dto.msisdn,
-      orderType: OrderType.DATA,
-      packageCode: dto.packageCode,
-    });
-  }
-
-  /**
-   * 账单支付订单
-   * POST /operators/unitel/orders/invoice
-   */
-  @Post('invoice')
-  async payInvoice(
-    @CurrentUser('openid') openid: string,
-    @Body() dto: PayInvoiceDto,
-  ) {
-    return this.orderService.createOrder(openid, {
-      msisdn: dto.msisdn,
-      orderType: OrderType.INVOICE_PAYMENT,
-      packageCode: dto.invoiceDate, // 账单支付时使用 invoiceDate 作为 packageCode
-    });
+    return this.orderService.createOrder(openid, dto);
   }
 
   /**

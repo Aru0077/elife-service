@@ -20,7 +20,7 @@ import {
   CardItem,
 } from '../interfaces';
 import { PackageDetail } from '../interfaces/order.interface';
-import { OrderType } from '../enums';
+import { OrderType, UnitelCacheType } from '../enums';
 
 /**
  * Unitel API 服务
@@ -33,9 +33,7 @@ import { OrderType } from '../enums';
 @Injectable()
 export class UnitelApiService {
   private readonly REDIS_TOKEN_KEY = 'unitel:access_token';
-  private readonly REDIS_SERVICE_TYPES_PREFIX = 'unitel:service_types';
-  private readonly REDIS_INVOICE_PREFIX = 'unitel:invoice';
-  private readonly CACHE_TTL = 300; // 5分钟（秒）
+  private readonly CACHE_TTL = 180; // 3分钟（秒）
 
   constructor(
     private readonly httpService: HttpService,
@@ -316,7 +314,67 @@ export class UnitelApiService {
   // ========== 缓存层方法（安全价格验证） ==========
 
   /**
-   * 获取缓存的资费列表（5分钟TTL）
+   * 生成缓存键
+   * @param cacheType 缓存类型
+   * @param openid 用户openid
+   * @param msisdn 手机号
+   * @returns 缓存键
+   * @private
+   */
+  private buildCacheKey(
+    cacheType: UnitelCacheType,
+    openid: string,
+    msisdn: string,
+  ): string {
+    return `unitel:${cacheType}:${openid}:${msisdn}`;
+  }
+
+  /**
+   * 通用缓存方法
+   * 统一处理所有类型的缓存逻辑
+   *
+   * @param cacheType 缓存类型
+   * @param msisdn 手机号
+   * @param openid 用户openid
+   * @param apiFetcher API调用函数
+   * @param dataDescription 数据描述（用于日志）
+   * @returns 缓存或API返回的数据
+   * @private
+   */
+  private async getCachedData<T>(
+    cacheType: UnitelCacheType,
+    msisdn: string,
+    openid: string,
+    apiFetcher: () => Promise<T>,
+    dataDescription: string,
+  ): Promise<T> {
+    // 1. 生成缓存键
+    const cacheKey = this.buildCacheKey(cacheType, openid, msisdn);
+
+    // 2. 尝试从缓存获取
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      this.logger.debug(`使用缓存的${dataDescription}: ${cacheKey}`);
+      return JSON.parse(cached);
+    }
+
+    // 3. 缓存miss，调用API获取
+    this.logger.info(`缓存miss，正在从第三方获取${dataDescription}: ${msisdn}`);
+    const data = await apiFetcher();
+
+    // 4. 保存到Redis（3分钟TTL）
+    await this.redisService.set(
+      cacheKey,
+      JSON.stringify(data),
+      this.CACHE_TTL,
+    );
+    this.logger.info(`${dataDescription}已缓存: ${cacheKey} (TTL: ${this.CACHE_TTL}s)`);
+
+    return data;
+  }
+
+  /**
+   * 获取缓存的资费列表（3分钟TTL）
    * 用于防止价格篡改和减轻第三方API压力
    *
    * @param msisdn 手机号
@@ -327,32 +385,17 @@ export class UnitelApiService {
     msisdn: string,
     openid: string,
   ): Promise<ServiceTypeResponse> {
-    const cacheKey = `${this.REDIS_SERVICE_TYPES_PREFIX}:${openid}:${msisdn}`;
-
-    // 1. 尝试从缓存获取
-    const cached = await this.redisService.get(cacheKey);
-    if (cached) {
-      this.logger.debug(`使用缓存的资费列表: ${cacheKey}`);
-      return JSON.parse(cached);
-    }
-
-    // 2. 缓存miss，调用API获取
-    this.logger.info(`缓存miss，正在从第三方获取资费列表: ${msisdn}`);
-    const response = await this.getServiceType(msisdn);
-
-    // 3. 保存到Redis（5分钟TTL）
-    await this.redisService.set(
-      cacheKey,
-      JSON.stringify(response),
-      this.CACHE_TTL,
+    return this.getCachedData(
+      UnitelCacheType.SERVICE_TYPES,
+      msisdn,
+      openid,
+      () => this.getServiceType(msisdn),
+      '资费列表',
     );
-    this.logger.info(`资费列表已缓存: ${cacheKey}`);
-
-    return response;
   }
 
   /**
-   * 获取缓存的账单信息（5分钟TTL）
+   * 获取缓存的账单信息（3分钟TTL）
    *
    * @param msisdn 手机号
    * @param openid 用户openid
@@ -362,28 +405,13 @@ export class UnitelApiService {
     msisdn: string,
     openid: string,
   ): Promise<InvoiceResponse> {
-    const cacheKey = `${this.REDIS_INVOICE_PREFIX}:${openid}:${msisdn}`;
-
-    // 1. 尝试从缓存获取
-    const cached = await this.redisService.get(cacheKey);
-    if (cached) {
-      this.logger.debug(`使用缓存的账单信息: ${cacheKey}`);
-      return JSON.parse(cached);
-    }
-
-    // 2. 缓存miss，调用API获取
-    this.logger.info(`缓存miss，正在从第三方获取账单信息: ${msisdn}`);
-    const response = await this.getInvoice(msisdn);
-
-    // 3. 保存到Redis（5分钟TTL）
-    await this.redisService.set(
-      cacheKey,
-      JSON.stringify(response),
-      this.CACHE_TTL,
+    return this.getCachedData(
+      UnitelCacheType.INVOICE,
+      msisdn,
+      openid,
+      () => this.getInvoice(msisdn),
+      '账单信息',
     );
-    this.logger.info(`账单信息已缓存: ${cacheKey}`);
-
-    return response;
   }
 
   /**
