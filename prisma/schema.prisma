@@ -53,6 +53,29 @@ model ExchangeRate {
 
 // ========== Unitel 运营商表 ==========
 
+/// 订单类型枚举
+enum OrderType {
+  balance          /// 话费充值
+  data             /// 流量充值
+  invoice_payment  /// 账单支付
+}
+
+/// 支付状态枚举
+enum PaymentStatus {
+  unpaid    /// 未支付
+  paid      /// 已支付
+  refunded  /// 已退款
+}
+
+/// 充值状态枚举
+enum RechargeStatus {
+  pending     /// 待充值
+  processing  /// 充值中
+  success     /// 充值成功
+  failed      /// 充值失败
+  timeout     /// 充值超时
+}
+
 /// Unitel订单表
 model UnitelOrder {
   // 订单基本信息
@@ -61,8 +84,8 @@ model UnitelOrder {
   // 用户信息
   openid String
   user   User   @relation(fields: [openid], references: [openid])
-  msisdn    String /// 手机号码
-  orderType String @map("order_type") /// 订单类型: balance(话费) | data(流量) | invoice_payment(账单支付)
+  msisdn    String    /// 手机号码
+  orderType OrderType @map("order_type") /// 订单类型: balance(话费) | data(流量) | invoice_payment(账单支付)
 
   // 金额信息（双币种）
   amountMnt    Decimal  @map("amount_mnt") @db.Decimal(10, 2) /// 蒙古国货币金额(MNT)
@@ -78,8 +101,8 @@ model UnitelOrder {
   packageDays    Int?    @map("package_days") /// 有效期天数
 
   // 状态管理
-  paymentStatus  String @map("payment_status") /// 支付状态: unpaid | paid | refunded
-  rechargeStatus String @map("recharge_status") /// 充值状态: pending | processing | success | failed
+  paymentStatus  PaymentStatus  @map("payment_status") /// 支付状态: unpaid | paid | refunded
+  rechargeStatus RechargeStatus @map("recharge_status") /// 充值状态: pending | processing | success | failed
 
   // Unitel API 特有字段
   svId   String? @map("sv_id") /// Unitel服务ID
