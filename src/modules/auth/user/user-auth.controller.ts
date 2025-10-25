@@ -1,5 +1,6 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { PinoLogger } from 'nestjs-pino';
 import { AuthService } from './services/auth.service';
 import { WechatLoginDto } from './dto/wechat-login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
@@ -11,7 +12,12 @@ import { AuthResponseDto } from './dto/auth-response.dto';
 @ApiTags('用户认证')
 @Controller('auth/user')
 export class UserAuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(UserAuthController.name);
+  }
 
   /**
    * 微信授权登录
@@ -39,6 +45,11 @@ export class UserAuthController {
   async wechatLogin(
     @Body() wechatLoginDto: WechatLoginDto,
   ): Promise<AuthResponseDto> {
-    return this.authService.wechatLogin(wechatLoginDto.code);
+    this.logger.info(
+      `微信授权登录请求: code=${wechatLoginDto.code.substring(0, 10)}...`,
+    );
+    const result = await this.authService.wechatLogin(wechatLoginDto.code);
+    this.logger.info(`用户登录成功: openid=${result.openid}`);
+    return result;
   }
 }

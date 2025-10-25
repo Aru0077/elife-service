@@ -7,6 +7,7 @@ import {
   Body,
   UseGuards,
 } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { JwtAuthGuard } from '@/modules/auth/user/guards/jwt-auth.guard';
 import { CurrentUser } from '@/modules/auth/user/decorators/current-user.decorator';
 import { UnitelOrderService } from '../services/unitel-order.service';
@@ -19,7 +20,12 @@ import { QueryOrderDto, CreateOrderDto } from '../dto';
 @Controller('operators/unitel/orders')
 @UseGuards(JwtAuthGuard) // 所有接口都需要 JWT 认证
 export class UnitelOrderController {
-  constructor(private readonly orderService: UnitelOrderService) {}
+  constructor(
+    private readonly orderService: UnitelOrderService,
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(UnitelOrderController.name);
+  }
 
   /**
    * 创建订单（统一端点）
@@ -37,7 +43,14 @@ export class UnitelOrderController {
     @CurrentUser('openid') openid: string,
     @Body() dto: CreateOrderDto,
   ) {
-    return this.orderService.createOrder(openid, dto);
+    this.logger.info(
+      `用户 ${openid} 创建订单: 类型=${dto.orderType}, 套餐=${dto.packageCode}, 手机号=${dto.msisdn}`,
+    );
+    const result = await this.orderService.createOrder(openid, dto);
+    this.logger.info(
+      `订单创建成功: ${result.order.orderNo}, 金额=${result.order.amountCny.toString()} CNY`,
+    );
+    return result;
   }
 
   /**
@@ -49,6 +62,9 @@ export class UnitelOrderController {
     @CurrentUser('openid') openid: string,
     @Query() dto: QueryOrderDto,
   ) {
+    this.logger.debug(
+      `用户 ${openid} 查询订单列表: page=${dto.page}, pageSize=${dto.pageSize}`,
+    );
     return this.orderService.findUserOrders(openid, dto);
   }
 
@@ -58,6 +74,7 @@ export class UnitelOrderController {
    */
   @Get(':orderNo')
   async getOrderDetail(@Param('orderNo') orderNo: string) {
+    this.logger.debug(`查询订单详情: ${orderNo}`);
     return this.orderService.findByOrderNo(orderNo);
   }
 
@@ -73,6 +90,9 @@ export class UnitelOrderController {
     @Param('orderNo') orderNo: string,
     @CurrentUser('openid') openid: string,
   ) {
-    return this.orderService.createWechatPayment(orderNo, openid);
+    this.logger.info(`用户 ${openid} 发起支付: 订单=${orderNo}`);
+    const result = await this.orderService.createWechatPayment(orderNo, openid);
+    this.logger.info(`支付prepay_id创建成功: ${orderNo}`);
+    return result;
   }
 }

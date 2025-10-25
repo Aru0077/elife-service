@@ -41,9 +41,10 @@ export class RechargeLogService {
 
       this.logger.log(`充值日志已创建: ${data.orderNo}`);
       return log;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { code?: string };
       // 如果是唯一约束冲突（orderNo重复），说明已经有充值记录
-      if (error.code === 'P2002') {
+      if (err.code === 'P2002') {
         this.logger.warn(`充值日志已存在（防重复）: ${data.orderNo}`);
         throw new Error('DUPLICATE_RECHARGE');
       }
@@ -62,7 +63,7 @@ export class RechargeLogService {
       result?: string;
       code?: string;
       msg?: string;
-      raw?: any;
+      raw?: Prisma.JsonValue;
     },
   ) {
     const startTime = await this.getStartTime(orderNo);
@@ -100,7 +101,7 @@ export class RechargeLogService {
       result?: string;
       code?: string;
       msg?: string;
-      raw?: any;
+      raw?: Prisma.JsonValue;
     },
   ) {
     const startTime = await this.getStartTime(orderNo);

@@ -1,14 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
-import { Prisma, UnitelOrder } from '@prisma/client';
+import {
+  Prisma,
+  UnitelOrder,
+  PaymentStatus,
+  RechargeStatus,
+} from '@prisma/client';
 import { nanoid } from 'nanoid';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ExchangeRateService } from '@/modules/exchange-rate/services/exchange-rate.service';
 import { WechatPayApiService } from '@/modules/wechat-pay';
 import { CreateOrderDto, QueryOrderDto } from '../dto';
-import { PaymentStatus, RechargeStatus } from '../enums';
 import { CreateOrderResult } from '../interfaces/order.interface';
 import { UnitelApiService } from './unitel-api.service';
+import { RechargeResponse, PaymentResponse } from '../interfaces';
 
 /**
  * Unitel 订单服务
@@ -76,8 +81,8 @@ export class UnitelOrderService {
         packageUnit: packageDetail.unit,
         packageData: packageDetail.data,
         packageDays: packageDetail.days,
-        paymentStatus: PaymentStatus.UNPAID,
-        rechargeStatus: RechargeStatus.PENDING,
+        paymentStatus: PaymentStatus.unpaid,
+        rechargeStatus: RechargeStatus.pending,
       },
     });
 
@@ -169,7 +174,7 @@ export class UnitelOrderService {
       where: { orderNo },
       data: {
         paymentStatus,
-        ...(paymentStatus === PaymentStatus.PAID && { paidAt: new Date() }),
+        ...(paymentStatus === PaymentStatus.paid && { paidAt: new Date() }),
       },
     });
 
@@ -211,7 +216,7 @@ export class UnitelOrderService {
         ...(apiResponse?.errorMessage
           ? { errorMessage: apiResponse.errorMessage }
           : {}),
-        ...(rechargeStatus === RechargeStatus.SUCCESS && {
+        ...(rechargeStatus === RechargeStatus.success && {
           completedAt: new Date(),
         }),
       },
@@ -275,10 +280,10 @@ export class UnitelOrderService {
       const updateResult = await this.prisma.unitelOrder.updateMany({
         where: {
           orderNo,
-          rechargeStatus: RechargeStatus.PENDING, // WHERE条件：只更新pending状态
+          rechargeStatus: RechargeStatus.pending, // WHERE条件：只更新pending状态
         },
         data: {
-          rechargeStatus: RechargeStatus.PROCESSING,
+          rechargeStatus: RechargeStatus.processing,
         },
       });
 
@@ -287,7 +292,7 @@ export class UnitelOrderService {
         this.logger.warn(`订单状态不允许充值（状态机保护）: ${orderNo}`);
         return {
           success: false,
-          status: RechargeStatus.PENDING,
+          status: RechargeStatus.pending,
           message: '订单状态不允许充值',
         };
       }
@@ -309,7 +314,7 @@ export class UnitelOrderService {
 
       // 调用 Unitel API 进行充值（30秒超时）
       const startTime = Date.now();
-      let apiResponse;
+      let apiResponse: RechargeResponse | PaymentResponse;
 
       try {
         // 根据订单类型调用不同的API
@@ -346,60 +351,63 @@ export class UnitelOrderService {
             break;
 
           default:
-            throw new Error(`不支持的订单类型: ${order.orderType}`);
+            throw new Error(`不支持的订单类型: ${String(order.orderType)}`);
         }
 
         const duration = Date.now() - startTime;
         this.logger.info(`充值API调用完成: ${orderNo}, 耗时: ${duration}ms`);
 
-        // 判断充值结果
-        if (apiResponse.success) {
-          // 充值成功
-          await this.updateRechargeStatus(orderNo, RechargeStatus.SUCCESS, {
-            svId: apiResponse.svId,
-            seq: apiResponse.seq,
-            apiResult: apiResponse.result,
-            apiCode: apiResponse.code,
-            apiMsg: apiResponse.msg,
-            apiRaw: apiResponse as Prisma.JsonValue,
+        // 判断充值结果 (检查 result 字段是否为 'success')
+        const isSuccess = apiResponse.result === 'success';
+        if (isSuccess) {
+          // 充值成功 - 安全访问 RechargeResponse 特有字段
+          const rechargeResp = apiResponse as RechargeResponse;
+          await this.updateRechargeStatus(orderNo, RechargeStatus.success, {
+            svId: rechargeResp.sv_id || undefined,
+            seq: rechargeResp.seq,
+            apiResult: rechargeResp.result,
+            apiCode: rechargeResp.code,
+            apiMsg: rechargeResp.msg,
+            apiRaw: apiResponse as unknown as Prisma.JsonValue,
           });
 
           return {
             success: true,
-            status: RechargeStatus.SUCCESS,
+            status: RechargeStatus.success,
           };
         } else {
           // 充值失败
-          await this.updateRechargeStatus(orderNo, RechargeStatus.FAILED, {
+          await this.updateRechargeStatus(orderNo, RechargeStatus.failed, {
             apiResult: apiResponse.result,
             apiCode: apiResponse.code,
             apiMsg: apiResponse.msg,
-            apiRaw: apiResponse as Prisma.JsonValue,
+            apiRaw: apiResponse as unknown as Prisma.JsonValue,
             errorMessage: apiResponse.msg || '充值失败',
             errorCode: apiResponse.code,
           });
 
           return {
             success: false,
-            status: RechargeStatus.FAILED,
+            status: RechargeStatus.failed,
             message: apiResponse.msg,
           };
         }
-      } catch (apiError) {
+      } catch (apiError: unknown) {
         const duration = Date.now() - startTime;
+        const error = apiError as Error & { code?: string };
 
         // 判断是否为超时错误（30秒）
-        if (duration >= 30000 || apiError.code === 'ETIMEDOUT') {
+        if (duration >= 30000 || error.code === 'ETIMEDOUT') {
           this.logger.warn(`充值API超时: ${orderNo}, 耗时: ${duration}ms`);
 
-          await this.updateRechargeStatus(orderNo, RechargeStatus.TIMEOUT, {
+          await this.updateRechargeStatus(orderNo, RechargeStatus.timeout, {
             errorMessage: `第三方API超时（${duration}ms）`,
             errorCode: 'TIMEOUT',
           });
 
           return {
             success: false,
-            status: RechargeStatus.TIMEOUT,
+            status: RechargeStatus.timeout,
             message: '充值超时',
           };
         }
@@ -407,23 +415,25 @@ export class UnitelOrderService {
         // 其他API错误
         throw apiError;
       }
-    } catch (error) {
-      this.logger.error(`充值失败: ${orderNo}`, error.stack);
+    } catch (error: unknown) {
+      const err = error as Error & { code?: string };
+      this.logger.error(`充值失败: ${orderNo}`, err.stack);
 
       // 尝试更新状态为失败
       try {
-        await this.updateRechargeStatus(orderNo, RechargeStatus.FAILED, {
-          errorMessage: error.message || '充值异常',
-          errorCode: error.code || 'UNKNOWN',
+        await this.updateRechargeStatus(orderNo, RechargeStatus.failed, {
+          errorMessage: err.message || '充值异常',
+          errorCode: err.code || 'UNKNOWN',
         });
-      } catch (updateError) {
-        this.logger.error(`更新充值状态失败: ${orderNo}`, updateError.stack);
+      } catch (updateError: unknown) {
+        const updateErr = updateError as Error;
+        this.logger.error(`更新充值状态失败: ${orderNo}`, updateErr.stack);
       }
 
       return {
         success: false,
-        status: RechargeStatus.FAILED,
-        message: error.message,
+        status: RechargeStatus.failed,
+        message: err.message,
       };
     }
   }

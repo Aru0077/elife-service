@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { OrderType } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { RedisService } from '@/redis/redis.service';
 import { RECHARGE_QUEUE, RECHARGE_JOB } from '../constants/queue.constants';
@@ -131,7 +132,7 @@ export class PaymentCallbackService {
     orderNo: string;
     openid: string;
     msisdn: string;
-    orderType: string;
+    orderType: OrderType;
     packageCode: string;
     amountMnt: { toNumber: () => number };
   }): Promise<void> {
@@ -140,10 +141,10 @@ export class PaymentCallbackService {
       operator: 'unitel', // 当前只支持unitel
       openid: order.openid,
       msisdn: order.msisdn,
-      orderType: order.orderType as 'balance' | 'data' | 'invoice_payment',
+      orderType: order.orderType,
       packageCode: order.packageCode,
       amountMnt: order.amountMnt.toNumber(),
-      rechargeType: order.orderType as 'balance' | 'data' | 'invoice_payment',
+      rechargeType: order.orderType,
       timestamp: Date.now(),
     };
 

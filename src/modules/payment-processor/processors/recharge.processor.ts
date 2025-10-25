@@ -1,7 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { RECHARGE_QUEUE, RECHARGE_JOB } from '../constants/queue.constants';
+import { RECHARGE_QUEUE } from '../constants/queue.constants';
 import { RechargeJobData } from '../interfaces/recharge-job.interface';
 import { RechargeLogService } from '../services/recharge-log.service';
 import { UnitelOrderService } from '@/modules/operators/unitel/services/unitel-order.service';
@@ -72,16 +72,18 @@ export class RechargeProcessor extends WorkerHost {
         }
         this.logger.warn(`充值任务失败: ${orderNo}, 状态: ${result.status}`);
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
+
       // 处理重复充值错误
-      if (error.message === 'DUPLICATE_RECHARGE') {
+      if (err.message === 'DUPLICATE_RECHARGE') {
         this.logger.warn(`重复充值被拦截（数据库层）: ${orderNo}`);
         // 不抛出错误，任务成功完成（已被幂等性保护）
         return;
       }
 
       // 其他错误：记录并抛出（任务失败）
-      this.logger.error(`充值任务处理失败: ${orderNo}`, error.stack);
+      this.logger.error(`充值任务处理失败: ${orderNo}`, err.stack);
       throw error;
     }
   }

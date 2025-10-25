@@ -1,3 +1,5 @@
+import { OrderType } from '@prisma/client';
+
 /**
  * 充值任务数据接口
  * 用于BullMQ队列任务的数据结构
@@ -16,7 +18,7 @@ export interface RechargeJobData {
   msisdn: string;
 
   /** 订单类型 */
-  orderType: 'balance' | 'data' | 'invoice_payment';
+  orderType: OrderType;
 
   /** 套餐代码 */
   packageCode: string;
@@ -25,7 +27,7 @@ export interface RechargeJobData {
   amountMnt: number;
 
   /** 充值类型 */
-  rechargeType: 'balance' | 'data' | 'invoice_payment';
+  rechargeType: OrderType;
 
   /** 任务创建时间戳 */
   timestamp: number;

@@ -1,4 +1,5 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { JwtAuthGuard } from '@/modules/auth/user/guards/jwt-auth.guard';
 import { CurrentUser } from '@/modules/auth/user/decorators';
 import { UnitelApiService } from '../services/unitel-api.service';
@@ -17,7 +18,12 @@ import { GetServiceTypeDto, GetInvoiceDto } from '../dto';
 @Controller('operators/unitel')
 @UseGuards(JwtAuthGuard) // 所有接口需要 JWT 认证
 export class UnitelServiceController {
-  constructor(private readonly unitelApiService: UnitelApiService) {}
+  constructor(
+    private readonly unitelApiService: UnitelApiService,
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(UnitelServiceController.name);
+  }
 
   /**
    * 获取资费列表(带缓存)
@@ -33,11 +39,17 @@ export class UnitelServiceController {
    * @returns 服务类型列表信息
    */
   @Post('service-types')
-  getServiceTypes(
+  async getServiceTypes(
     @CurrentUser('openid') openid: string,
     @Body() dto: GetServiceTypeDto,
   ) {
-    return this.unitelApiService.getCachedServiceTypes(dto.msisdn, openid);
+    this.logger.info(`用户 ${openid} 查询资费列表: 手机号=${dto.msisdn}`);
+    const result = await this.unitelApiService.getCachedServiceTypes(
+      dto.msisdn,
+      openid,
+    );
+    this.logger.debug(`资费列表查询成功: 手机号=${dto.msisdn}`);
+    return result;
   }
 
   /**
@@ -55,6 +67,14 @@ export class UnitelServiceController {
     @CurrentUser('openid') openid: string,
     @Body() dto: GetInvoiceDto,
   ) {
-    return this.unitelApiService.getCachedInvoice(dto.msisdn, openid);
+    this.logger.info(`用户 ${openid} 查询账单: 手机号=${dto.msisdn}`);
+    const result = await this.unitelApiService.getCachedInvoice(
+      dto.msisdn,
+      openid,
+    );
+    this.logger.debug(
+      `账单查询成功: 手机号=${dto.msisdn}, 账单金额=${result.invoice_amount} MNT`,
+    );
+    return result;
   }
 }
