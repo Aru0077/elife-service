@@ -64,9 +64,9 @@ export class UnitelApiService {
     this.logger.info('缓存中无 Token，正在获取新 Token...');
     const token = await this.fetchNewToken();
 
-    // 3. 保存到 Redis（无 TTL，依赖被动刷新）
-    await this.redisService.set(this.REDIS_TOKEN_KEY, token);
-    this.logger.info('新 Token 已缓存到 Redis');
+    // 3. 保存到 Redis（TTL: 1小时，提供双重保护）
+    await this.redisService.set(this.REDIS_TOKEN_KEY, token, 3600);
+    this.logger.info('新 Token 已缓存到 Redis (TTL: 3600秒)');
 
     return token;
   }

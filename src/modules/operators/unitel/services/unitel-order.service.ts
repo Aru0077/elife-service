@@ -297,13 +297,22 @@ export class UnitelOrderService {
       // 获取订单信息
       const order = await this.findByOrderNo(orderNo);
 
+      // 构造 transactions 参数
+      const transactions = [
+        {
+          journal_id: orderNo, // 使用订单号作为交易ID
+          amount: order.amountMnt.toFixed(2), // 转换为"3000.00"格式
+          description: order.packageEngName || '', // 套餐英文名（可为空）
+          account: '', // 账户标识（可为空）
+        },
+      ];
+
       // 调用 Unitel API 进行充值（30秒超时）
       const startTime = Date.now();
       let apiResponse;
 
       try {
         // 根据订单类型调用不同的API
-        // TODO: 需要构造完整的API参数（transactions, vatflag, vat_register_no等）
         switch (order.orderType) {
           case 'balance':
             apiResponse = await this.unitelApiService.rechargeBalance({
@@ -311,7 +320,7 @@ export class UnitelOrderService {
               card: order.packageCode,
               vatflag: order.vatFlag || '0',
               vat_register_no: order.vatRegisterNo || '',
-              transactions: [], // TODO: 构造transactions数组
+              transactions,
             });
             break;
 
@@ -321,7 +330,7 @@ export class UnitelOrderService {
               package: order.packageCode,
               vatflag: order.vatFlag || '0',
               vat_register_no: order.vatRegisterNo || '',
-              transactions: [], // TODO: 构造transactions数组
+              transactions,
             });
             break;
 
@@ -332,7 +341,7 @@ export class UnitelOrderService {
               remark: `账单支付 ${order.packageCode}`,
               vatflag: order.vatFlag || '0',
               vat_register_no: order.vatRegisterNo || '',
-              transactions: [], // TODO: 构造transactions数组
+              transactions,
             });
             break;
 

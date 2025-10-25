@@ -147,17 +147,7 @@ export class WechatPayController {
       );
 
       // 3. 处理退款结果
-      // TODO: 这里应该更新订单的退款状态
-      // 例如：调用OrderService更新订单的退款状态
-
-      // 示例逻辑（需要实际实现）：
-      // if (refundData.refund_status === RefundStatus.SUCCESS) {
-      //   await this.orderService.updateRefundStatus(
-      //     refundData.out_trade_no,
-      //     RefundStatus.SUCCESS
-      //   );
-      // }
-
+      // 注意: 当前项目不做退款业务，仅记录退款回调日志
       this.logger.info(
         `退款回调处理完成: 退款单号=${refundData.out_refund_no}`,
       );

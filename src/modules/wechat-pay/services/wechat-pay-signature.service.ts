@@ -84,11 +84,9 @@ export class WechatPaySignatureService {
         body, // 请求体（原始JSON）
       ].join('\n');
 
-      const message = signatureStr + '\n';
-
       // 2. 使用平台证书公钥验证签名
       const verify = createVerify('RSA-SHA256');
-      verify.update(message);
+      verify.update(signatureStr + '\n');
       const isValid = verify.verify(
         this.config.platformCert,
         headers['wechatpay-signature'],

@@ -140,7 +140,7 @@ export class PaymentCallbackService {
       operator: 'unitel', // 当前只支持unitel
       openid: order.openid,
       msisdn: order.msisdn,
-      orderType: order.orderType,
+      orderType: order.orderType as 'balance' | 'data' | 'invoice_payment',
       packageCode: order.packageCode,
       amountMnt: order.amountMnt.toNumber(),
       rechargeType: order.orderType as 'balance' | 'data' | 'invoice_payment',
