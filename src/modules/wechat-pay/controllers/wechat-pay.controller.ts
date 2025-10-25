@@ -10,11 +10,13 @@ import {
 import { PinoLogger } from 'nestjs-pino';
 import { WechatPaySignatureService } from '../services/wechat-pay-signature.service';
 import { WechatPayCryptoService } from '../services/wechat-pay-crypto.service';
+import { PaymentCallbackService } from '@/modules/payment-processor/services/payment-callback.service';
 import {
   PaymentCallbackHeaders,
   PaymentCallbackBody,
   PaymentCallbackResource,
   RefundCallbackResource,
+  TransactionState,
 } from '../interfaces/wechat-pay.interface';
 
 /**
@@ -26,6 +28,7 @@ export class WechatPayController {
   constructor(
     private readonly signatureService: WechatPaySignatureService,
     private readonly cryptoService: WechatPayCryptoService,
+    private readonly paymentCallbackService: PaymentCallbackService,
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(WechatPayController.name);
@@ -41,10 +44,10 @@ export class WechatPayController {
    */
   @Post('notify')
   @HttpCode(HttpStatus.NO_CONTENT) // 返回204 No Content
-  handlePaymentCallback(
+  async handlePaymentCallback(
     @Headers() headers: PaymentCallbackHeaders,
     @Body() body: PaymentCallbackBody,
-  ): void {
+  ): Promise<void> {
     this.logger.info(
       `收到微信支付回调通知: ${body.id}, 事件类型: ${body.event_type}`,
     );
@@ -76,19 +79,19 @@ export class WechatPayController {
       );
 
       // 3. 处理支付结果
-      // TODO: 这里应该更新订单状态、触发业务逻辑等
-      // 例如：调用OrderService更新订单的支付状态
-
-      // 示例逻辑（需要实际实现）：
-      // if (paymentData.trade_state === TransactionState.SUCCESS) {
-      //   await this.orderService.updatePaymentStatus(
-      //     paymentData.out_trade_no,
-      //     PaymentStatus.PAID
-      //   );
-      //   await this.orderService.processRecharge(paymentData.out_trade_no);
-      // }
-
-      this.logger.info(`支付回调处理完成: 订单号=${paymentData.out_trade_no}`);
+      if (paymentData.trade_state === TransactionState.SUCCESS) {
+        await this.paymentCallbackService.handlePaymentSuccess(
+          paymentData.transaction_id,
+          paymentData.out_trade_no,
+        );
+        this.logger.info(
+          `支付回调处理成功: 订单号=${paymentData.out_trade_no}`,
+        );
+      } else {
+        this.logger.warn(
+          `支付未成功: 订单号=${paymentData.out_trade_no}, 状态=${paymentData.trade_state}`,
+        );
+      }
 
       // 4. 返回成功（204 No Content）
       // 微信收到此响应后不会再发送通知

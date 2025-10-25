@@ -60,4 +60,19 @@ export class UnitelOrderController {
   async getOrderDetail(@Param('orderNo') orderNo: string) {
     return this.orderService.findByOrderNo(orderNo);
   }
+
+  /**
+   * 发起微信支付
+   * POST /operators/unitel/orders/:orderNo/pay
+   *
+   * 返回微信支付预支付交易会话标识（prepay_id）
+   * 前端使用该prepay_id调用微信JSAPI完成支付
+   */
+  @Post(':orderNo/pay')
+  async createPayment(
+    @Param('orderNo') orderNo: string,
+    @CurrentUser('openid') openid: string,
+  ) {
+    return this.orderService.createWechatPayment(orderNo, openid);
+  }
 }

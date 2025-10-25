@@ -115,3 +115,40 @@ model UnitelOrder {
   @@index([createdAt])
   @@map("unitel_orders")
 }
+
+/// 充值日志表（记录所有充值尝试，用于审计和幂等性保护）
+model RechargeLog {
+  id String @id @default(uuid())
+
+  // 订单信息
+  orderNo  String @unique @map("order_no") /// 订单号（唯一约束，防止重复充值）
+  operator String /// 运营商标识: unitel | ondo
+
+  // 充值请求信息
+  msisdn        String  /// 充值手机号
+  packageCode   String  @map("package_code") /// 套餐代码
+  amountMnt     Decimal @map("amount_mnt") @db.Decimal(10, 2) /// 充值金额(MNT)
+  rechargeType  String  @map("recharge_type") /// 充值类型: balance | data | invoice_payment
+
+  // 充值结果
+  status       String  @map("status") /// 充值状态: processing | success | failed | timeout
+  errorMessage String? @map("error_message") /// 错误消息
+  errorCode    String? @map("error_code") /// 错误代码
+
+  // API 响应信息（用于调试和审计）
+  apiResult String? @map("api_result") /// API返回的result字段
+  apiCode   String? @map("api_code") /// API返回的code字段
+  apiMsg    String? @map("api_msg") /// API返回的msg字段
+  apiRaw    Json?   @map("api_raw") /// 完整的API响应
+
+  // 时间信息
+  startedAt   DateTime  @default(now()) @map("started_at") /// 充值开始时间
+  completedAt DateTime? @map("completed_at") /// 充值完成时间
+  duration    Int?      /// 充值耗时（毫秒）
+
+  @@index([orderNo])
+  @@index([operator])
+  @@index([status])
+  @@index([startedAt])
+  @@map("recharge_logs")
+}

@@ -17,6 +17,7 @@
   "dependencies": {
     "@alicloud/log": "^1.2.5",
     "@nestjs/axios": "^4.0.1",
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -28,6 +29,7 @@
     "@nestjs/throttler": "^6.4.0",
     "@prisma/client": "^6.17.1",
     "axios": "^1.12.2",
+    "bullmq": "^5.61.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "helmet": "^8.1.0",

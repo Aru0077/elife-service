@@ -12,6 +12,7 @@ import { ExchangeRateModule } from '@/modules/exchange-rate';
 import { UnitelModule } from '@/modules/operators/unitel/unitel.module';
 import { UserAuthModule } from '@/modules/auth/user/user-auth.module';
 import { WechatPayModule } from '@/modules/wechat-pay';
+import { PaymentProcessorModule } from '@/modules/payment-processor/payment-processor.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { WechatPayModule } from '@/modules/wechat-pay';
     UnitelModule,
     UserAuthModule, // 用户认证模块
     WechatPayModule, // 微信支付模块
+    PaymentProcessorModule, // 支付处理器模块（回调处理和充值队列）
   ],
   providers: [
     {

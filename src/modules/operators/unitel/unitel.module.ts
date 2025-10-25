@@ -5,6 +5,7 @@ import unitelConfig from './config/unitel.config';
 import { RedisModule } from '@/redis/redis.module';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { ExchangeRateModule } from '@/modules/exchange-rate';
+import { WechatPayModule } from '@/modules/wechat-pay';
 import { UnitelApiService } from './services';
 import { UnitelOrderService } from './services/unitel-order.service';
 import { UnitelOrderController } from './controllers/unitel-order.controller';
@@ -31,6 +32,9 @@ import { LoggerModule } from '@/logger/logger.module';
 
     // 汇率模块（用于汇率转换）
     ExchangeRateModule,
+
+    // 微信支付模块（用于创建支付订单）
+    WechatPayModule,
 
     // 日志模块（用于记录日志）
     LoggerModule,

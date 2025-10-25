@@ -13,4 +13,7 @@ export enum RechargeStatus {
 
   /** 充值失败 */
   FAILED = 'failed',
+
+  /** 充值超时（第三方API超时30秒） */
+  TIMEOUT = 'timeout',
 }

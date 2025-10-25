@@ -4,6 +4,7 @@ import { Prisma, UnitelOrder } from '@prisma/client';
 import { nanoid } from 'nanoid';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ExchangeRateService } from '@/modules/exchange-rate/services/exchange-rate.service';
+import { WechatPayApiService } from '@/modules/wechat-pay';
 import { CreateOrderDto, QueryOrderDto } from '../dto';
 import { PaymentStatus, RechargeStatus } from '../enums';
 import { CreateOrderResult } from '../interfaces/order.interface';
@@ -19,6 +20,7 @@ export class UnitelOrderService {
     private readonly prisma: PrismaService,
     private readonly exchangeRateService: ExchangeRateService,
     private readonly unitelApiService: UnitelApiService,
+    private readonly wechatPayApiService: WechatPayApiService,
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(UnitelOrderService.name);
@@ -217,5 +219,203 @@ export class UnitelOrderService {
 
     this.logger.info(`订单 ${orderNo} 充值状态已更新: ${rechargeStatus}`);
     return order;
+  }
+
+  /**
+   * 创建微信支付订单
+   * @param orderNo 订单号
+   * @param openid 用户的 openid
+   * @returns 微信支付预支付交易会话标识
+   */
+  async createWechatPayment(
+    orderNo: string,
+    openid: string,
+  ): Promise<{ prepayId: string }> {
+    // 查询订单
+    const order = await this.findByOrderNo(orderNo);
+
+    // 验证订单状态
+    if (order.paymentStatus !== 'unpaid') {
+      throw new Error(`订单状态不允许支付: ${order.paymentStatus}`);
+    }
+
+    if (order.openid !== openid) {
+      throw new Error('订单不属于当前用户');
+    }
+
+    // 调用微信支付API创建订单
+    const result = await this.wechatPayApiService.createTransaction({
+      description: `${order.packageEngName} - ${order.msisdn}`,
+      out_trade_no: orderNo,
+      amount: {
+        total: Math.round(order.amountCny.toNumber() * 100), // 转换为分
+      },
+      payer: { openid },
+    });
+
+    this.logger.info(`微信支付订单创建成功: ${orderNo}`);
+
+    return {
+      prepayId: result.prepay_id,
+    };
+  }
+
+  /**
+   * 执行充值操作（带超时控制和状态机保护）
+   * @param orderNo 订单号
+   * @returns 充值结果
+   */
+  async executeRecharge(orderNo: string): Promise<{
+    success: boolean;
+    status: RechargeStatus;
+    message?: string;
+  }> {
+    try {
+      // 第2层防护：数据库状态机 - 原子更新（只有pending状态才能开始充值）
+      const updateResult = await this.prisma.unitelOrder.updateMany({
+        where: {
+          orderNo,
+          rechargeStatus: RechargeStatus.PENDING, // WHERE条件：只更新pending状态
+        },
+        data: {
+          rechargeStatus: RechargeStatus.PROCESSING,
+        },
+      });
+
+      // 如果更新失败（count === 0），说明状态不是pending（可能已经充值过）
+      if (updateResult.count === 0) {
+        this.logger.warn(`订单状态不允许充值（状态机保护）: ${orderNo}`);
+        return {
+          success: false,
+          status: RechargeStatus.PENDING,
+          message: '订单状态不允许充值',
+        };
+      }
+
+      this.logger.info(`开始执行充值: ${orderNo}`);
+
+      // 获取订单信息
+      const order = await this.findByOrderNo(orderNo);
+
+      // 调用 Unitel API 进行充值（30秒超时）
+      const startTime = Date.now();
+      let apiResponse;
+
+      try {
+        // 根据订单类型调用不同的API
+        // TODO: 需要构造完整的API参数（transactions, vatflag, vat_register_no等）
+        switch (order.orderType) {
+          case 'balance':
+            apiResponse = await this.unitelApiService.rechargeBalance({
+              msisdn: order.msisdn,
+              card: order.packageCode,
+              vatflag: order.vatFlag || '0',
+              vat_register_no: order.vatRegisterNo || '',
+              transactions: [], // TODO: 构造transactions数组
+            });
+            break;
+
+          case 'data':
+            apiResponse = await this.unitelApiService.rechargeData({
+              msisdn: order.msisdn,
+              package: order.packageCode,
+              vatflag: order.vatFlag || '0',
+              vat_register_no: order.vatRegisterNo || '',
+              transactions: [], // TODO: 构造transactions数组
+            });
+            break;
+
+          case 'invoice_payment':
+            apiResponse = await this.unitelApiService.payInvoice({
+              msisdn: order.msisdn,
+              amount: order.amountMnt.toString(),
+              remark: `账单支付 ${order.packageCode}`,
+              vatflag: order.vatFlag || '0',
+              vat_register_no: order.vatRegisterNo || '',
+              transactions: [], // TODO: 构造transactions数组
+            });
+            break;
+
+          default:
+            throw new Error(`不支持的订单类型: ${order.orderType}`);
+        }
+
+        const duration = Date.now() - startTime;
+        this.logger.info(`充值API调用完成: ${orderNo}, 耗时: ${duration}ms`);
+
+        // 判断充值结果
+        if (apiResponse.success) {
+          // 充值成功
+          await this.updateRechargeStatus(orderNo, RechargeStatus.SUCCESS, {
+            svId: apiResponse.svId,
+            seq: apiResponse.seq,
+            apiResult: apiResponse.result,
+            apiCode: apiResponse.code,
+            apiMsg: apiResponse.msg,
+            apiRaw: apiResponse as Prisma.JsonValue,
+          });
+
+          return {
+            success: true,
+            status: RechargeStatus.SUCCESS,
+          };
+        } else {
+          // 充值失败
+          await this.updateRechargeStatus(orderNo, RechargeStatus.FAILED, {
+            apiResult: apiResponse.result,
+            apiCode: apiResponse.code,
+            apiMsg: apiResponse.msg,
+            apiRaw: apiResponse as Prisma.JsonValue,
+            errorMessage: apiResponse.msg || '充值失败',
+            errorCode: apiResponse.code,
+          });
+
+          return {
+            success: false,
+            status: RechargeStatus.FAILED,
+            message: apiResponse.msg,
+          };
+        }
+      } catch (apiError) {
+        const duration = Date.now() - startTime;
+
+        // 判断是否为超时错误（30秒）
+        if (duration >= 30000 || apiError.code === 'ETIMEDOUT') {
+          this.logger.warn(`充值API超时: ${orderNo}, 耗时: ${duration}ms`);
+
+          await this.updateRechargeStatus(orderNo, RechargeStatus.TIMEOUT, {
+            errorMessage: `第三方API超时（${duration}ms）`,
+            errorCode: 'TIMEOUT',
+          });
+
+          return {
+            success: false,
+            status: RechargeStatus.TIMEOUT,
+            message: '充值超时',
+          };
+        }
+
+        // 其他API错误
+        throw apiError;
+      }
+    } catch (error) {
+      this.logger.error(`充值失败: ${orderNo}`, error.stack);
+
+      // 尝试更新状态为失败
+      try {
+        await this.updateRechargeStatus(orderNo, RechargeStatus.FAILED, {
+          errorMessage: error.message || '充值异常',
+          errorCode: error.code || 'UNKNOWN',
+        });
+      } catch (updateError) {
+        this.logger.error(`更新充值状态失败: ${orderNo}`, updateError.stack);
+      }
+
+      return {
+        success: false,
+        status: RechargeStatus.FAILED,
+        message: error.message,
+      };
+    }
   }
 }
