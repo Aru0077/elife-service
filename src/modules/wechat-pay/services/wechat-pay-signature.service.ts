@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
-import { createSign } from 'crypto';
+import { createSign, createVerify } from 'crypto';
 import wechatPayConfig from '../config/wechat-pay.config';
 import { PaymentCallbackHeaders } from '../interfaces/wechat-pay.interface';
 
@@ -66,8 +66,7 @@ export class WechatPaySignatureService {
 
   /**
    * 验证微信支付回调签名
-   * 注意：实际生产环境需要使用微信支付平台证书的公钥验证
-   * 这里仅提供签名验证的框架，需要商户自行下载和管理平台证书
+   * 使用微信支付平台证书的公钥验证回调签名
    *
    * @param headers 回调请求头
    * @param body 回调请求体（原始JSON字符串）
@@ -77,40 +76,46 @@ export class WechatPaySignatureService {
     headers: PaymentCallbackHeaders,
     body: string,
   ): boolean {
-    // 1. 构造验签串
-    const signatureStr = [
-      headers['wechatpay-timestamp'], // 时间戳
-      headers['wechatpay-nonce'], // 随机串
-      body, // 请求体（原始JSON）
-    ].join('\n');
+    try {
+      // 1. 构造验签串
+      const signatureStr = [
+        headers['wechatpay-timestamp'], // 时间戳
+        headers['wechatpay-nonce'], // 随机串
+        body, // 请求体（原始JSON）
+      ].join('\n');
 
-    const message = signatureStr + '\n';
+      const message = signatureStr + '\n';
 
-    // 2. 验证签名
-    // TODO: 实际生产环境需要使用微信支付平台证书公钥进行验证
-    // 这里返回true是为了演示流程，生产环境必须实现真实的签名验证
-    // 参考：https://pay.weixin.qq.com/doc/v3/merchant/4012791867
+      // 2. 使用平台证书公钥验证签名
+      const verify = createVerify('RSA-SHA256');
+      verify.update(message);
+      const isValid = verify.verify(
+        this.config.platformCert,
+        headers['wechatpay-signature'],
+        'base64',
+      );
 
-    // 示例代码（需要商户下载平台证书）：
-    // const verify = createVerify('RSA-SHA256');
-    // verify.update(_message);
-    // const isValid = verify.verify(platformPublicKey, headers['wechatpay-signature'], 'base64');
+      if (!isValid) {
+        console.error('微信支付回调签名验证失败');
+        return false;
+      }
 
-    // 暂时跳过签名验证（生产环境必须启用）
-    console.warn('⚠️  微信支付回调签名验证已跳过，生产环境必须实现真实验证！');
+      // 3. 验证时间戳（防重放攻击）
+      const timestamp = parseInt(headers['wechatpay-timestamp'], 10);
+      const now = Math.floor(Date.now() / 1000);
+      const timeDiff = Math.abs(now - timestamp);
 
-    // 3. 验证时间戳（防重放攻击）
-    const timestamp = parseInt(headers['wechatpay-timestamp'], 10);
-    const now = Math.floor(Date.now() / 1000);
-    const timeDiff = Math.abs(now - timestamp);
+      // 时间戳超过5分钟则拒绝
+      if (timeDiff > 300) {
+        console.error('回调时间戳过期', { timestamp, now, timeDiff });
+        return false;
+      }
 
-    // 时间戳超过5分钟则拒绝
-    if (timeDiff > 300) {
-      console.error('回调时间戳过期', { timestamp, now, timeDiff });
+      return true;
+    } catch (error) {
+      console.error('验证微信支付回调签名时发生错误', error);
       return false;
     }
-
-    return true;
   }
 
   /**

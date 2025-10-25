@@ -12,6 +12,7 @@ function validateWechatPayConfig() {
     'WECHAT_PAY_PRIVATE_KEY',
     'WECHAT_PAY_APIV3_KEY',
     'WECHAT_PAY_NOTIFY_URL',
+    'WECHAT_PAY_PLATFORM_CERT',
   ];
 
   const missingVars = requiredEnvVars.filter(
@@ -51,6 +52,12 @@ export default registerAs('wechatPay', () => {
 
     // APIv3密钥（用于AES-256-GCM解密）
     apiv3Key: process.env.WECHAT_PAY_APIV3_KEY!,
+
+    // 微信支付平台证书公钥（Base64编码，用于验证回调签名）
+    platformCert: Buffer.from(
+      process.env.WECHAT_PAY_PLATFORM_CERT!,
+      'base64',
+    ).toString('utf-8'),
 
     // 支付回调通知URL
     notifyUrl: process.env.WECHAT_PAY_NOTIFY_URL!,
