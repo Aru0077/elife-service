@@ -14,12 +14,14 @@ function validateWechatPayConfig() {
     'WECHAT_PAY_NOTIFY_URL',
   ];
 
-  const missingVars = requiredEnvVars.filter((varName) => !process.env[varName]);
+  const missingVars = requiredEnvVars.filter(
+    (varName) => !process.env[varName],
+  );
 
   if (missingVars.length > 0) {
     throw new Error(
       `微信支付配置缺失必需的环境变量: ${missingVars.join(', ')}\n` +
-      `请检查 .env 文件并确保已配置所有必需变量`,
+        `请检查 .env 文件并确保已配置所有必需变量`,
     );
   }
 }
