@@ -9,10 +9,10 @@ import {
 import { nanoid } from 'nanoid';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ExchangeRateService } from '@/modules/exchange-rate/services/exchange-rate.service';
-import { WechatPayApiService } from '@/modules/wechat-pay';
+import { WechatPayApiService } from '@/modules/api-services/wechat-pay-api';
 import { CreateOrderDto, QueryOrderDto } from '../dto';
 import { CreateOrderResult } from '../interfaces/order.interface';
-import { UnitelApiService } from './unitel-api.service';
+import { UnitelApiService } from '@/modules/api-services/unitel-api';
 import { RechargeResponse, PaymentResponse } from '../interfaces';
 
 /**

@@ -9,10 +9,11 @@ import { HealthModule } from '@/health/health.module';
 import { LoggerModule } from '@/logger/logger.module';
 import { ThrottlerBehindProxyGuard } from '@/common/guards/throttler-behind-proxy.guard';
 import { ExchangeRateModule } from '@/modules/exchange-rate';
-import { UnitelModule } from '@/modules/operators/unitel/unitel.module';
 import { UserAuthModule } from '@/modules/auth/user/user-auth.module';
-import { WechatPayModule } from '@/modules/wechat-pay';
-import { PaymentProcessorModule } from '@/modules/payment-processor/payment-processor.module';
+import { WechatPayApiModule } from '@/modules/api-services/wechat-pay-api';
+import { UnitelApiModule } from '@/modules/api-services/unitel-api';
+import { UnitelOrderModule } from '@/modules/operators/unitel/unitel-order.module';
+import { PaymentFlowModule } from '@/modules/payment-flow/payment-flow.module';
 
 @Module({
   imports: [
@@ -32,15 +33,26 @@ import { PaymentProcessorModule } from '@/modules/payment-processor/payment-proc
         ],
       }),
     }),
+
+    // 基础设施层
     LoggerModule, // 日志模块（全局）
-    PrismaModule,
-    RedisModule,
-    HealthModule,
-    ExchangeRateModule,
-    UnitelModule,
+    PrismaModule, // 数据库模块（全局）
+    RedisModule, // Redis 模块（全局）
+    HealthModule, // 健康检查
+
+    // 业务公共模块
+    ExchangeRateModule, // 汇率服务
     UserAuthModule, // 用户认证模块
-    WechatPayModule, // 微信支付模块
-    PaymentProcessorModule, // 支付处理器模块（回调处理和充值队列）
+
+    // API 服务层（纯第三方 API 封装）
+    WechatPayApiModule, // 微信支付 API
+    UnitelApiModule, // Unitel 运营商 API
+
+    // 业务逻辑层
+    UnitelOrderModule, // Unitel 订单业务
+
+    // 流程协调层
+    PaymentFlowModule, // 支付流程（回调处理和充值队列）
   ],
   providers: [
     {

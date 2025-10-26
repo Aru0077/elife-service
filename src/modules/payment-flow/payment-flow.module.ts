@@ -1,16 +1,19 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from '@/logger/logger.module';
-import { UnitelModule } from '@/modules/operators/unitel/unitel.module';
+import { WechatPayApiModule } from '@/modules/api-services/wechat-pay-api';
+import { UnitelOrderModule } from '@/modules/operators/unitel/unitel-order.module';
 import { RECHARGE_QUEUE } from './constants/queue.constants';
 import { PaymentCallbackService } from './services/payment-callback.service';
 import { RechargeLogService } from './services/recharge-log.service';
 import { RechargeProcessor } from './processors/recharge.processor';
+import { PaymentCallbackController } from './controllers/payment-callback.controller';
 
 /**
- * 支付处理器模块
+ * 支付流程模块
  * 负责处理微信支付回调和充值业务的异步处理
+ * 包含支付回调 Controller、回调服务、充值队列处理
  */
 @Module({
   imports: [
@@ -40,10 +43,14 @@ import { RechargeProcessor } from './processors/recharge.processor';
 
     LoggerModule,
 
-    // 导入运营商模块（用于执行充值）
-    forwardRef(() => UnitelModule),
+    // 微信支付 API 模块（用于验证签名和解密）
+    WechatPayApiModule,
+
+    // Unitel 订单模块（用于更新订单和执行充值）
+    UnitelOrderModule,
   ],
+  controllers: [PaymentCallbackController], // 支付回调 Controller
   providers: [PaymentCallbackService, RechargeLogService, RechargeProcessor],
-  exports: [PaymentCallbackService, RechargeLogService],
+  exports: [], // 顶层流程模块，不导出服务
 })
-export class PaymentProcessorModule {}
+export class PaymentFlowModule {}

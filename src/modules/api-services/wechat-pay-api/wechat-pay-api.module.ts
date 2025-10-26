@@ -3,15 +3,14 @@ import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 import wechatPayConfig from './config/wechat-pay.config';
 import { LoggerModule } from '@/logger/logger.module';
-import { PaymentProcessorModule } from '@/modules/payment-processor/payment-processor.module';
 import { WechatPayApiService } from './services/wechat-pay-api.service';
 import { WechatPaySignatureService } from './services/wechat-pay-signature.service';
 import { WechatPayCryptoService } from './services/wechat-pay-crypto.service';
-import { WechatPayController } from './controllers/wechat-pay.controller';
 
 /**
- * 微信支付模块
- * 提供微信支付JSAPI的完整功能封装
+ * 微信支付 API 模块
+ * 纯粹的微信支付 API 封装，无业务逻辑
+ * 提供支付接口调用、签名验证、数据加解密服务
  */
 @Module({
   imports: [
@@ -23,11 +22,7 @@ import { WechatPayController } from './controllers/wechat-pay.controller';
 
     // 日志模块
     LoggerModule,
-
-    // 支付处理器模块（用于处理回调和充值）
-    PaymentProcessorModule,
   ],
-  controllers: [WechatPayController],
   providers: [
     WechatPayApiService,
     WechatPaySignatureService,
@@ -37,6 +32,6 @@ import { WechatPayController } from './controllers/wechat-pay.controller';
     WechatPayApiService,
     WechatPaySignatureService,
     WechatPayCryptoService,
-  ], // 导出供其他模块使用
+  ],
 })
-export class WechatPayModule {}
+export class WechatPayApiModule {}

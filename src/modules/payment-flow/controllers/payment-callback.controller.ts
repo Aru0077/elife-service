@@ -8,30 +8,30 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
-import { WechatPaySignatureService } from '../services/wechat-pay-signature.service';
-import { WechatPayCryptoService } from '../services/wechat-pay-crypto.service';
-import { PaymentCallbackService } from '@/modules/payment-processor/services/payment-callback.service';
 import {
+  WechatPaySignatureService,
+  WechatPayCryptoService,
   PaymentCallbackHeaders,
   PaymentCallbackBody,
   PaymentCallbackResource,
   RefundCallbackResource,
   TransactionState,
-} from '../interfaces/wechat-pay.interface';
+} from '@/modules/api-services/wechat-pay-api';
+import { PaymentCallbackService } from '../services/payment-callback.service';
 
 /**
- * 微信支付回调控制器
+ * 支付回调控制器
  * 处理微信支付和退款的异步通知
  */
 @Controller('payment/wechat')
-export class WechatPayController {
+export class PaymentCallbackController {
   constructor(
     private readonly signatureService: WechatPaySignatureService,
     private readonly cryptoService: WechatPayCryptoService,
     private readonly paymentCallbackService: PaymentCallbackService,
     private readonly logger: PinoLogger,
   ) {
-    this.logger.setContext(WechatPayController.name);
+    this.logger.setContext(PaymentCallbackController.name);
   }
 
   /**
