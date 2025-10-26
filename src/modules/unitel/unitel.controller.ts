@@ -10,8 +10,8 @@ import {
 import { PinoLogger } from 'nestjs-pino';
 import { JwtAuthGuard } from '@/modules/auth/user/guards/jwt-auth.guard';
 import { CurrentUser } from '@/modules/auth/user/decorators/current-user.decorator';
-import { UnitelOrderService } from '../services/unitel-order.service';
-import { QueryOrderDto, CreateOrderDto } from '../dto';
+import { UnitelService } from './unitel.service';
+import { QueryOrderDto, CreateOrderDto } from './dto';
 
 /**
  * Unitel 订单控制器
@@ -19,12 +19,12 @@ import { QueryOrderDto, CreateOrderDto } from '../dto';
  */
 @Controller('operators/unitel/orders')
 @UseGuards(JwtAuthGuard) // 所有接口都需要 JWT 认证
-export class UnitelOrderController {
+export class UnitelController {
   constructor(
-    private readonly orderService: UnitelOrderService,
+    private readonly orderService: UnitelService,
     private readonly logger: PinoLogger,
   ) {
-    this.logger.setContext(UnitelOrderController.name);
+    this.logger.setContext(UnitelController.name);
   }
 
   /**

@@ -10,17 +10,17 @@ import { nanoid } from 'nanoid';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ExchangeRateService } from '@/modules/exchange-rate/services/exchange-rate.service';
 import { WechatPayApiService } from '@/modules/api-services/wechat-pay-api';
-import { CreateOrderDto, QueryOrderDto } from '../dto';
-import { CreateOrderResult } from '../interfaces/order.interface';
+import { CreateOrderDto, QueryOrderDto } from './dto';
+import { CreateOrderResult } from './interfaces/order.interface';
 import { UnitelApiService } from '@/modules/api-services/unitel-api';
-import { RechargeResponse, PaymentResponse } from '../interfaces';
+import { RechargeResponse, PaymentResponse } from '@/modules/api-services/unitel-api';
 
 /**
  * Unitel 订单服务
  * 负责处理订单相关的 CRUD 操作和业务逻辑
  */
 @Injectable()
-export class UnitelOrderService {
+export class UnitelService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly exchangeRateService: ExchangeRateService,
@@ -28,7 +28,7 @@ export class UnitelOrderService {
     private readonly wechatPayApiService: WechatPayApiService,
     private readonly logger: PinoLogger,
   ) {
-    this.logger.setContext(UnitelOrderService.name);
+    this.logger.setContext(UnitelService.name);
   }
 
   /**

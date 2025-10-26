@@ -4,7 +4,7 @@ import { Job } from 'bullmq';
 import { RECHARGE_QUEUE } from '../constants/queue.constants';
 import { RechargeJobData } from '../interfaces/recharge-job.interface';
 import { RechargeLogService } from '../services/recharge-log.service';
-import { UnitelOrderService } from '@/modules/operators/unitel/services/unitel-order.service';
+import { UnitelService } from '@/modules/unitel';
 
 /**
  * 充值队列处理器
@@ -16,7 +16,7 @@ export class RechargeProcessor extends WorkerHost {
 
   constructor(
     private readonly rechargeLogService: RechargeLogService,
-    private readonly unitelOrderService: UnitelOrderService,
+    private readonly unitelService: UnitelService,
   ) {
     super();
   }
@@ -50,7 +50,7 @@ export class RechargeProcessor extends WorkerHost {
         message?: string;
       };
       if (operator === 'unitel') {
-        result = await this.unitelOrderService.executeRecharge(orderNo);
+        result = await this.unitelService.executeRecharge(orderNo);
       } else {
         throw new Error(`不支持的运营商: ${operator}`);
       }

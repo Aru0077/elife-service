@@ -1,5 +1,5 @@
 import { IsString, IsEnum } from 'class-validator';
-import { OrderType } from '../enums';
+import { OrderType } from '@prisma/client';
 
 /**
  * 创建订单 DTO

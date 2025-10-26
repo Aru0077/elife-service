@@ -1,6 +1,6 @@
 import { IsOptional, IsEnum, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PaymentStatus, RechargeStatus, OrderType } from '../enums';
+import { PaymentStatus, RechargeStatus, OrderType } from '@prisma/client';
 
 /**
  * 查询订单 DTO

@@ -12,7 +12,7 @@ import { ExchangeRateModule } from '@/modules/exchange-rate';
 import { UserAuthModule } from '@/modules/auth/user/user-auth.module';
 import { WechatPayApiModule } from '@/modules/api-services/wechat-pay-api';
 import { UnitelApiModule } from '@/modules/api-services/unitel-api';
-import { UnitelOrderModule } from '@/modules/operators/unitel/unitel-order.module';
+import { UnitelModule } from '@/modules/unitel/unitel.module';
 import { PaymentFlowModule } from '@/modules/payment-flow/payment-flow.module';
 
 @Module({
@@ -49,7 +49,7 @@ import { PaymentFlowModule } from '@/modules/payment-flow/payment-flow.module';
     UnitelApiModule, // Unitel 运营商 API
 
     // 业务逻辑层
-    UnitelOrderModule, // Unitel 订单业务
+    UnitelModule, // Unitel 订单业务
 
     // 流程协调层
     PaymentFlowModule, // 支付流程（回调处理和充值队列）

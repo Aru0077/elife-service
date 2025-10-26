@@ -3,7 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from '@/logger/logger.module';
 import { WechatPayApiModule } from '@/modules/api-services/wechat-pay-api';
-import { UnitelOrderModule } from '@/modules/operators/unitel/unitel-order.module';
+import { UnitelModule } from '@/modules/unitel/unitel.module';
 import { RECHARGE_QUEUE } from './constants/queue.constants';
 import { PaymentCallbackService } from './services/payment-callback.service';
 import { RechargeLogService } from './services/recharge-log.service';
@@ -47,7 +47,7 @@ import { PaymentCallbackController } from './controllers/payment-callback.contro
     WechatPayApiModule,
 
     // Unitel 订单模块（用于更新订单和执行充值）
-    UnitelOrderModule,
+    UnitelModule,
   ],
   controllers: [PaymentCallbackController], // 支付回调 Controller
   providers: [PaymentCallbackService, RechargeLogService, RechargeProcessor],

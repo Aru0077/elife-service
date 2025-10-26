@@ -20,7 +20,8 @@ import {
   CardItem,
 } from '../interfaces';
 import { PackageDetail } from '../interfaces/order.interface';
-import { OrderType, UnitelCacheType } from '../enums';
+import { OrderType } from '@prisma/client';
+import { UnitelCacheType } from '../enums';
 
 /**
  * Unitel API 服务
@@ -429,7 +430,7 @@ export class UnitelApiService {
     const { packageCode, msisdn, openid, orderType } = params;
 
     // 1. 根据订单类型查询不同数据源
-    if (orderType === OrderType.INVOICE_PAYMENT) {
+    if (orderType === 'invoice_payment') {
       // 账单支付：从账单信息中获取
       return this.findInvoicePackage(packageCode, msisdn, openid);
     } else {
@@ -482,7 +483,7 @@ export class UnitelApiService {
     let packageType: 'balance' | 'data' | undefined;
 
     // 2. 根据订单类型在不同分类中查找
-    if (orderType === OrderType.BALANCE) {
+    if (orderType === 'balance') {
       // 话费充值：在 service.cards 中查找
       const allBalanceCards = [
         ...(serviceTypes.service.cards.day || []),
@@ -491,7 +492,7 @@ export class UnitelApiService {
       ];
       foundCard = allBalanceCards.find((card) => card.code === packageCode);
       packageType = 'balance';
-    } else if (orderType === OrderType.DATA) {
+    } else if (orderType === 'data') {
       // 流量充值：在 service.data 中查找
       const allDataCards = [
         ...(serviceTypes.service.data.data || []),

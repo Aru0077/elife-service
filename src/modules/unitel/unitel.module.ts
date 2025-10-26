@@ -3,9 +3,8 @@ import { PrismaModule } from '@/prisma/prisma.module';
 import { ExchangeRateModule } from '@/modules/exchange-rate';
 import { WechatPayApiModule } from '@/modules/api-services/wechat-pay-api';
 import { UnitelApiModule } from '@/modules/api-services/unitel-api';
-import { UnitelOrderService } from './services/unitel-order.service';
-import { UnitelOrderController } from './controllers/unitel-order.controller';
-import { UnitelServiceController } from './controllers/unitel-service.controller';
+import { UnitelService } from './unitel.service';
+import { UnitelController } from './unitel.controller';
 import { LoggerModule } from '@/logger/logger.module';
 
 /**
@@ -30,8 +29,8 @@ import { LoggerModule } from '@/logger/logger.module';
     // 日志模块（用于记录日志）
     LoggerModule,
   ],
-  controllers: [UnitelOrderController, UnitelServiceController],
-  providers: [UnitelOrderService],
-  exports: [UnitelOrderService], // 导出供 PaymentFlowModule 使用
+  controllers: [UnitelController],
+  providers: [UnitelService],
+  exports: [UnitelService], // 导出供 PaymentFlowModule 使用
 })
-export class UnitelOrderModule {}
+export class UnitelModule {}

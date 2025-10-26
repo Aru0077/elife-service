@@ -1,6 +1,0 @@
-/**
- * Unitel 控制器导出
- */
-
-export * from './unitel-order.controller';
-export * from './unitel-service.controller';
