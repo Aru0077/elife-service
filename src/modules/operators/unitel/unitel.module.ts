@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 import unitelConfig from './config/unitel.config';
@@ -34,7 +34,7 @@ import { LoggerModule } from '@/logger/logger.module';
     ExchangeRateModule,
 
     // 微信支付模块（用于创建支付订单）
-    WechatPayModule,
+    forwardRef(() => WechatPayModule),
 
     // 日志模块（用于记录日志）
     LoggerModule,
