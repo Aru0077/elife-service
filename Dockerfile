@@ -1,7 +1,7 @@
 # ============================================
 # Stage 1: Dependencies - 安装所有依赖
 # ============================================
-FROM node:22-alpine AS dependencies
+FROM registry.cn-hangzhou.aliyuncs.com/library/node:22-alpine AS dependencies
 
 # 设置工作目录
 WORKDIR /app
@@ -18,7 +18,7 @@ RUN npm ci
 # ============================================
 # Stage 2: Build - 构建应用
 # ============================================
-FROM node:22-alpine AS build
+FROM registry.cn-hangzhou.aliyuncs.com/library/node:22-alpine AS build
 
 WORKDIR /app
 
@@ -40,7 +40,7 @@ RUN npm run build
 # ============================================
 # Stage 3: Production - 生产环境镜像
 # ============================================
-FROM node:22-alpine AS production
+FROM registry.cn-hangzhou.aliyuncs.com/library/node:22-alpine AS production
 
 WORKDIR /app
 
