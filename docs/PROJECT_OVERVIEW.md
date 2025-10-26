@@ -598,6 +598,8 @@ https://pay.weixin.qq.com/doc/v3/merchant/4012791867
 https://pay.weixin.qq.com/doc/v3/merchant/4012791868
 以上是微信支付jsapi的官方文档网址，
 
+2025.10.26 已开通阿里云SAE，绑定了git，开始构建
+
 **最后更新**: 2025-10-22
 **文档版本**: 2.0.0
 **项目版本**: 0.0.1
