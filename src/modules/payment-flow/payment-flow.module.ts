@@ -34,8 +34,6 @@ import { PaymentCallbackController } from './controllers/payment-callback.contro
           commandTimeout: 5000,
           // 启用离线队列
           enableOfflineQueue: true,
-          // 最大重连次数
-          maxRetriesPerRequest: 3,
           // 重连策略：使用指数退避算法
           retryStrategy: (times: number) => {
             if (times > 10) {

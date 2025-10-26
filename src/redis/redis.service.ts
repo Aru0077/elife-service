@@ -25,8 +25,6 @@ export class RedisService implements OnModuleDestroy {
       commandTimeout: 5000,
       // 启用离线队列，确保连接断开时命令不会丢失
       enableOfflineQueue: true,
-      // 最大重连次数（设置为 null 表示无限重连）
-      maxRetriesPerRequest: 3,
       // 重连策略：使用指数退避算法
       retryStrategy: (times: number) => {
         if (times > 10) {
