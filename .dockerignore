@@ -1,0 +1,83 @@
+# 依赖目录（将在容器中重新安装）
+node_modules
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 编译输出
+dist
+build
+*.tsbuildinfo
+
+# 日志文件
+logs
+*.log
+lerna-debug.log*
+
+# 测试覆盖率
+coverage
+.nyc_output
+
+# 环境变量文件（敏感信息不应包含在镜像中）
+.env
+.env.*
+!.env.example
+
+# Git 相关
+.git
+.gitignore
+.gitattributes
+
+# IDE 和编辑器
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# 临时文件
+.temp
+.tmp
+*.tmp
+
+# 文档和说明（可选，如果想在镜像中保留可以注释掉）
+*.md
+!README.md
+docs
+
+# Docker 相关
+Dockerfile
+.dockerignore
+docker-compose.yml
+.docker
+
+# CI/CD 配置
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# 证书文件（敏感）
+/certs
+*.pem
+*.key
+*.cert
+
+# 运行时数据
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# 诊断报告
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Prisma 生成的文件（将在构建阶段重新生成）
+/generated/prisma
