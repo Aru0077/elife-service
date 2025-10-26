@@ -1,12 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigType } from '@nestjs/config';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
-import pino from 'pino';
 import pinoPretty from 'pino-pretty';
 import type { IncomingMessage, ServerResponse } from 'http';
 import loggerConfig from './config/logger.config';
 import { ThirdPartyLoggerService } from './services/third-party-logger.service';
-import { createSlsTransportStream } from './transports/sls.transport';
 import { randomUUID } from 'crypto';
 
 @Module({
@@ -16,35 +14,17 @@ import { randomUUID } from 'crypto';
       imports: [ConfigModule.forFeature(loggerConfig)],
       inject: [loggerConfig.KEY],
       useFactory: (config: ConfigType<typeof loggerConfig>) => {
-        const streams: Array<{
-          level?: string;
-          stream: NodeJS.WritableStream;
-        }> = [];
-
-        // 控制台输出
-        if (config.pretty) {
-          // 开发环境：美化输出
-          streams.push({
-            stream: pinoPretty({
+        // 日志输出流配置
+        // SAE环境下，JSON格式的stdout会被自动采集到SLS
+        const stream = config.pretty
+          ? // 开发环境：美化输出
+            pinoPretty({
               colorize: true,
               translateTime: 'SYS:yyyy-mm-dd HH:MM:ss',
               ignore: 'pid,hostname',
-            }),
-          });
-        } else {
-          // 生产环境：JSON 输出
-          streams.push({
-            stream: process.stdout,
-          });
-        }
-
-        // 阿里云 SLS 输出
-        if (config.sls.enabled) {
-          streams.push({
-            level: 'warn', // SLS 只记录 warn 及以上级别
-            stream: createSlsTransportStream(config.sls),
-          });
-        }
+            })
+          : // 生产环境：JSON格式输出到stdout，SAE自动采集
+            process.stdout;
 
         return {
           pinoHttp: {
@@ -106,11 +86,8 @@ import { randomUUID } from 'crypto';
                 stack: err.stack,
               }),
             },
-            // 使用多流
-            stream:
-              streams.length > 1
-                ? pino.multistream(streams)
-                : streams[0].stream,
+            // 输出流：开发环境美化，生产环境JSON
+            stream,
           },
         };
       },
