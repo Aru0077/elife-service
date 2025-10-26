@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from '@/logger/logger.module';
@@ -41,7 +41,7 @@ import { RechargeProcessor } from './processors/recharge.processor';
     LoggerModule,
 
     // 导入运营商模块（用于执行充值）
-    UnitelModule,
+    forwardRef(() => UnitelModule),
   ],
   providers: [PaymentCallbackService, RechargeLogService, RechargeProcessor],
   exports: [PaymentCallbackService, RechargeLogService],
