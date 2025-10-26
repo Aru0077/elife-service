@@ -26,6 +26,23 @@ import { PaymentCallbackController } from './controllers/payment-callback.contro
           port: configService.get<number>('redis.port'),
           password: configService.get<string>('redis.password'),
           db: configService.get<number>('redis.db'),
+          // 启用 TCP keepAlive，每 30 秒发送心跳包保持连接活跃
+          keepAlive: 30000,
+          // 连接超时设置（10秒）
+          connectTimeout: 10000,
+          // 命令执行超时设置（5秒）
+          commandTimeout: 5000,
+          // 启用离线队列
+          enableOfflineQueue: true,
+          // 最大重连次数
+          maxRetriesPerRequest: 3,
+          // 重连策略：使用指数退避算法
+          retryStrategy: (times: number) => {
+            if (times > 10) {
+              return null;
+            }
+            return Math.min(times * 200, 3000);
+          },
         },
       }),
       inject: [ConfigService],
