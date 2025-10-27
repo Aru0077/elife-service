@@ -14,6 +14,14 @@ export function createRedisOptions(config: {
 }): RedisOptions {
   const logger = new Logger('RedisConfig');
 
+  // 添加详细日志
+  logger.log(`=== Redis 连接配置 ===`);
+  logger.log(`Host: ${config.host}`);
+  logger.log(`Port: ${config.port}`);
+  logger.log(`DB: ${config.db}`);
+  logger.log(`Password 长度: ${config.password?.length || 0}`);
+  logger.log(`=======================`);
+
   return {
     host: config.host,
     port: config.port,
@@ -24,7 +32,7 @@ export function createRedisOptions(config: {
     // 连接超时设置（10秒）
     connectTimeout: 10000,
     // 命令执行超时设置（5秒）
-    commandTimeout: 5000,
+    commandTimeout: 30000,
     // 启用离线队列，确保连接断开时命令不会丢失
     enableOfflineQueue: true,
     // 重连策略：使用指数退避算法
