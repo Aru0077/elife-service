@@ -54,7 +54,7 @@ RUN addgroup -g 1001 -S nodejs && \
 # 复制 package 文件
 COPY package.json package-lock.json ./
 
-# 安装生产依赖和 prisma CLI（用于 SAE 初始化容器中的数据库迁移）
+# 安装生产依赖和 prisma CLI（用于数据库迁移）
 RUN npm ci --only=production && \
     npm install prisma && \
     npm cache clean --force
@@ -67,8 +67,12 @@ COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build /app/prisma ./prisma
 
+# 复制启动脚本（新增）
+COPY start.sh ./
+
 # 更改文件所有权
-RUN chown -R nestjs:nodejs /app
+RUN chown -R nestjs:nodejs /app && \
+    chmod +x start.sh
 
 # 切换到非 root 用户
 USER nestjs
@@ -81,4 +85,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # 启动命令
-CMD ["node", "dist/main"]
+# CMD ["node", "dist/main"]
+CMD ["./start.sh"]
