@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from '@/logger/logger.module';
 import { WechatPayApiModule } from '@/modules/api-services/wechat-pay-api';
 import { UnitelModule } from '@/modules/unitel/unitel.module';
+import { createRedisOptions } from '@/redis/redis.config';
 import { RECHARGE_QUEUE } from './constants/queue.constants';
 import { PaymentCallbackService } from './services/payment-callback.service';
 import { RechargeLogService } from './services/recharge-log.service';
@@ -17,32 +18,21 @@ import { PaymentCallbackController } from './controllers/payment-callback.contro
  */
 @Module({
   imports: [
-    // 注册BullMQ队列
+    // 注册BullMQ队列（使用统一的 Redis 配置）
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        connection: {
-          host: configService.get<string>('redis.host'),
-          port: configService.get<number>('redis.port'),
+      useFactory: (configService: ConfigService) => {
+        const redisConfig = {
+          host: configService.get<string>('redis.host')!,
+          port: configService.get<number>('redis.port')!,
           password: configService.get<string>('redis.password'),
-          db: configService.get<number>('redis.db'),
-          // 启用 TCP keepAlive，每 30 秒发送心跳包保持连接活跃
-          keepAlive: 30000,
-          // 连接超时设置（10秒）
-          connectTimeout: 10000,
-          // 命令执行超时设置（5秒）
-          commandTimeout: 5000,
-          // 启用离线队列
-          enableOfflineQueue: true,
-          // 重连策略：使用指数退避算法
-          retryStrategy: (times: number) => {
-            if (times > 10) {
-              return null;
-            }
-            return Math.min(times * 200, 3000);
-          },
-        },
-      }),
+          db: configService.get<number>('redis.db')!,
+        };
+
+        return {
+          connection: createRedisOptions(redisConfig),
+        };
+      },
       inject: [ConfigService],
     }),
 

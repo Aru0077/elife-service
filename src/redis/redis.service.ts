@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { createRedisOptions } from './redis.config';
 
 /**
  * Redis 服务
@@ -12,45 +13,17 @@ export class RedisService implements OnModuleDestroy {
   private client: Redis;
 
   constructor(private configService: ConfigService) {
-    const config = {
-      host: this.configService.get<string>('redis.host'),
-      port: this.configService.get<number>('redis.port'),
+    const redisConfig = {
+      host: this.configService.get<string>('redis.host')!,
+      port: this.configService.get<number>('redis.port')!,
       password: this.configService.get<string>('redis.password'),
-      db: this.configService.get<number>('redis.db'),
-      // 启用 TCP keepAlive，每 30 秒发送心跳包保持连接活跃
-      keepAlive: 30000,
-      // 连接超时设置（10秒）
-      connectTimeout: 10000,
-      // 命令执行超时设置（5秒）
-      commandTimeout: 5000,
-      // 启用离线队列，确保连接断开时命令不会丢失
-      enableOfflineQueue: true,
-      // 重连策略：使用指数退避算法
-      retryStrategy: (times: number) => {
-        if (times > 10) {
-          // 超过 10 次重连后停止
-          this.logger.error('Redis 重连次数超过限制，停止重连');
-          return null;
-        }
-        // 指数退避：重连延迟时间为 Math.min(times * 200, 3000) ms
-        const delay = Math.min(times * 200, 3000);
-        this.logger.warn(
-          `Redis 重连中... 第 ${times} 次尝试，${delay}ms 后重试`,
-        );
-        return delay;
-      },
-      // 启用自动重连
-      reconnectOnError: (err) => {
-        const targetError = 'READONLY';
-        if (err.message.includes(targetError)) {
-          // 仅在特定错误时重连
-          return true;
-        }
-        return false;
-      },
+      db: this.configService.get<number>('redis.db')!,
     };
 
-    this.client = new Redis(config);
+    // 使用统一的 Redis 配置工厂创建连接选项
+    const options = createRedisOptions(redisConfig);
+
+    this.client = new Redis(options);
 
     // 监听连接成功事件
     this.client.on('connect', () => {

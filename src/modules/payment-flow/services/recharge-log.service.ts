@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { PrismaService } from '@/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
@@ -8,9 +9,12 @@ import { Prisma } from '@prisma/client';
  */
 @Injectable()
 export class RechargeLogService {
-  private readonly logger = new Logger(RechargeLogService.name);
-
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(RechargeLogService.name);
+  }
 
   /**
    * 创建充值日志（开始充值时）
@@ -39,7 +43,7 @@ export class RechargeLogService {
         },
       });
 
-      this.logger.log(`充值日志已创建: ${data.orderNo}`);
+      this.logger.info(`充值日志已创建: ${data.orderNo}`);
       return log;
     } catch (error: unknown) {
       const err = error as { code?: string };
@@ -82,7 +86,7 @@ export class RechargeLogService {
       },
     });
 
-    this.logger.log(`充值成功: ${orderNo}, 耗时: ${duration}ms`);
+    this.logger.info(`充值成功: ${orderNo}, 耗时: ${duration}ms`);
   }
 
   /**

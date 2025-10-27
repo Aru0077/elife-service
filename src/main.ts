@@ -2,12 +2,18 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import { AppModule } from '@/app.module';
 import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true, // 缓冲日志直到 logger 准备好
+  });
+
+  // 使用 Pino Logger（替代默认的 NestJS Logger）
+  app.useLogger(app.get(Logger));
 
   // Trust proxy for rate limiting behind load balancers
   app.set('trust proxy', 'loopback');
@@ -54,10 +60,13 @@ async function bootstrap() {
   }
 
   const port = process.env.PORT ?? 3000;
+  const logger = app.get(Logger);
+
   await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}/api`);
-  console.log(`Swagger documentation: http://localhost:${port}/api/docs`);
-  console.log(
+
+  logger.log(`Application is running on: http://localhost:${port}/api`);
+  logger.log(`Swagger documentation: http://localhost:${port}/api/docs`);
+  logger.log(
     `Rate limiting: ${process.env.THROTTLE_LIMIT} requests per ${process.env.THROTTLE_TTL} seconds`,
   );
 }

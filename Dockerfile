@@ -54,8 +54,9 @@ RUN addgroup -g 1001 -S nodejs && \
 # 复制 package 文件
 COPY package.json package-lock.json ./
 
-# 仅安装生产依赖
+# 安装生产依赖和 prisma CLI（用于 SAE 初始化容器中的数据库迁移）
 RUN npm ci --only=production && \
+    npm install prisma && \
     npm cache clean --force
 
 # 从 build 阶段复制构建产物

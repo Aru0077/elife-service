@@ -12,7 +12,12 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "eslint \"src/**/*.ts\" --fix"
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:status": "prisma migrate status",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
