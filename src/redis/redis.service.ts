@@ -34,7 +34,9 @@ export class RedisService implements OnModuleDestroy {
         }
         // 指数退避：重连延迟时间为 Math.min(times * 200, 3000) ms
         const delay = Math.min(times * 200, 3000);
-        this.logger.warn(`Redis 重连中... 第 ${times} 次尝试，${delay}ms 后重试`);
+        this.logger.warn(
+          `Redis 重连中... 第 ${times} 次尝试，${delay}ms 后重试`,
+        );
         return delay;
       },
       // 启用自动重连
