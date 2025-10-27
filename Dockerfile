@@ -1,7 +1,8 @@
 # ============================================
 # Stage 1: Dependencies - 安装所有依赖
 # ============================================
-FROM node:22-alpine AS dependencies
+# 替换为ACR中的amd64节点镜像，确保架构匹配
+FROM crpi-iznmm4vdi9sd9g41.cn-beijing.personal.cr.aliyuncs.com/mongolian_elife_2025/node_22-alpine:amd64 AS dependencies
 
 # 设置工作目录
 WORKDIR /app
@@ -18,7 +19,8 @@ RUN npm ci
 # ============================================
 # Stage 2: Build - 构建应用
 # ============================================
-FROM node:22-alpine AS build
+# 同样使用ACR镜像，保持构建环境一致性
+FROM crpi-iznmm4vdi9sd9g41.cn-beijing.personal.cr.aliyuncs.com/mongolian_elife_2025/node_22-alpine:amd64 AS build
 
 WORKDIR /app
 
@@ -40,7 +42,8 @@ RUN npm run build
 # ============================================
 # Stage 3: Production - 生产环境镜像
 # ============================================
-FROM node:22-alpine AS production
+# 生产环境同样使用ACR镜像，避免依赖公共仓库
+FROM crpi-iznmm4vdi9sd9g41.cn-beijing.personal.cr.aliyuncs.com/mongolian_elife_2025/node_22-alpine:amd64 AS production
 
 WORKDIR /app
 
