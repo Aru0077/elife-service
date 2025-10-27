@@ -17,7 +17,8 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:status": "prisma migrate status",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
@@ -63,6 +64,7 @@
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
+    "patch-package": "^8.0.1",
     "prettier": "^3.4.2",
     "prisma": "^6.17.1",
     "source-map-support": "^0.5.21",
