@@ -6,7 +6,7 @@ import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import { AppModule } from '@/app.module';
 import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
-
+import { dumpExpressRoutes } from './test.js';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true, // 缓冲日志直到 logger 准备好
@@ -62,6 +62,7 @@ async function bootstrap() {
   const port = process.env.PORT ?? 3000;
   const logger = app.get(Logger);
 
+  dumpExpressRoutes(app);
   await app.listen(port);
 
   logger.log(`Application is running on: http://localhost:${port}/api`);
