@@ -30,7 +30,11 @@ import { PaymentCallbackController } from './controllers/payment-callback.contro
         };
 
         return {
-          connection: createRedisOptions(redisConfig),
+          connection: {
+            ...createRedisOptions(redisConfig),
+            // 延迟连接：不在初始化时阻塞，而是在第一次使用时连接
+            lazyConnect: true,
+          },
         };
       },
       inject: [ConfigService],

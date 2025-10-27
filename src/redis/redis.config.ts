@@ -29,10 +29,12 @@ export function createRedisOptions(config: {
     db: config.db,
     // 启用 TCP keepAlive，每 30 秒发送心跳包保持连接活跃
     keepAlive: 30000,
-    // 连接超时设置（10秒）
-    connectTimeout: 10000,
-    // 命令执行超时设置（5秒）
-    commandTimeout: 30000,
+    // 连接超时设置（5秒，快速失败）
+    connectTimeout: 5000,
+    // 命令执行超时设置（10秒）
+    commandTimeout: 10000,
+    // 限制每个命令的重试次数
+    maxRetriesPerRequest: 3,
     // 启用离线队列，确保连接断开时命令不会丢失
     enableOfflineQueue: true,
     // 重连策略：使用指数退避算法
