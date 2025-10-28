@@ -43,8 +43,8 @@ async function bootstrap() {
 
   // API Versioning (Header-based)
   app.enableVersioning({
-    type: VersioningType.HEADER,
-    header: 'X-API-Version',
+    type: VersioningType.URI,
+    prefix: 'v',
     defaultVersion: '1',
   });
 

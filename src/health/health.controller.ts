@@ -1,5 +1,5 @@
 import { Controller, Get, Version } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Health')
@@ -9,11 +9,6 @@ export class HealthController {
   @Version('1')
   @SkipThrottle()
   @ApiOperation({ summary: 'Health check (v1)' })
-  @ApiHeader({
-    name: 'X-API-Version',
-    required: false,
-    description: 'API version (default: 1)',
-  })
   check() {
     return {
       status: 'ok',
@@ -26,11 +21,6 @@ export class HealthController {
   @Version('2')
   @SkipThrottle()
   @ApiOperation({ summary: 'Health check (v2) - Enhanced' })
-  @ApiHeader({
-    name: 'X-API-Version',
-    required: false,
-    description: 'API version',
-  })
   checkV2() {
     return {
       status: 'ok',
