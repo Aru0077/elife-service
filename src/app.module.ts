@@ -19,7 +19,17 @@ import { PaymentFlowModule } from '@/modules/payment-flow/payment-flow.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+      // 环境文件加载优先级（从高到低）:
+      // 1. .env.[mode].local - 本地覆盖文件（不提交到 git）
+      // 2. .env.[mode] - 环境特定配置文件
+      // 3. .env - 仅作为生产环境回退（其他环境不应依赖此文件）
+      envFilePath: [
+        `.env.${process.env.NODE_ENV || 'development'}.local`,
+        `.env.${process.env.NODE_ENV || 'development'}`,
+      ],
+      // 如果指定的 envFilePath 文件不存在，不使用 .env 作为回退
+      ignoreEnvFile: false, // 仍然读取文件，但优先级由 envFilePath 数组控制
+      expandVariables: true, // 支持变量展开 ${VAR}
       validationSchema,
       cache: true,
     }),

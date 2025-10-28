@@ -37,11 +37,18 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 # dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+# Tracked files (template/example files):
+# - .env.example (template for all environments)
+# - .env.production.example (production configuration template)
+# - .env.development (development configuration - tracked for team consistency)
+#
+# Ignored files (contain secrets/local overrides):
+.env                          # Never use this file - renamed to .env.production.example
+.env.production               # Production secrets (if deployed via git)
+.env.development.local        # Local development overrides
+.env.test.local               # Local test overrides
+.env.production.local         # Local production overrides
+.env.local                    # Generic local overrides
 
 # temp directory
 .temp

@@ -16,11 +16,17 @@ async function bootstrap() {
   app.useLogger(logger);
 
   // 环境变量验证日志
+  const nodeEnv = process.env.NODE_ENV || 'undefined';
+  const envFile = nodeEnv !== 'undefined' ? `.env.${nodeEnv}` : '.env';
+
   logger.log('=== Environment Configuration ===');
-  logger.log(`NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
+  logger.log(`NODE_ENV: ${nodeEnv}`);
+  logger.log(`Expected env file: ${envFile}`);
   logger.log(`LOG_LEVEL: ${process.env.LOG_LEVEL || 'undefined'}`);
   logger.log(`LOG_PRETTY: ${process.env.LOG_PRETTY || 'undefined'}`);
   logger.log(`DATABASE_URL: ${process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 30) + '...' : 'undefined'}`);
+  logger.log(`REDIS_HOST: ${process.env.REDIS_HOST || 'undefined'}`);
+  logger.log(`REDIS_PORT: ${process.env.REDIS_PORT || 'undefined'}`);
   logger.log('================================');
 
   // Trust proxy for rate limiting behind load balancers
