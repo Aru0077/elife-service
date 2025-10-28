@@ -12,7 +12,16 @@ async function bootstrap() {
   });
 
   // 使用 Pino Logger（替代默认的 NestJS Logger）
-  app.useLogger(app.get(Logger));
+  const logger = app.get(Logger);
+  app.useLogger(logger);
+
+  // 环境变量验证日志
+  logger.log('=== Environment Configuration ===');
+  logger.log(`NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
+  logger.log(`LOG_LEVEL: ${process.env.LOG_LEVEL || 'undefined'}`);
+  logger.log(`LOG_PRETTY: ${process.env.LOG_PRETTY || 'undefined'}`);
+  logger.log(`DATABASE_URL: ${process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 30) + '...' : 'undefined'}`);
+  logger.log('================================');
 
   // Trust proxy for rate limiting behind load balancers
   app.set('trust proxy', 'loopback');
@@ -59,7 +68,6 @@ async function bootstrap() {
   }
 
   const port = process.env.PORT ?? 3000;
-  const logger = app.get(Logger);
 
   await app.listen(port);
 
