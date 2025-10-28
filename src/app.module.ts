@@ -19,6 +19,7 @@ import { PaymentFlowModule } from '@/modules/payment-flow/payment-flow.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       validationSchema,
       cache: true,
     }),
