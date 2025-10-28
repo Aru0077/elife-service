@@ -24,7 +24,9 @@ async function bootstrap() {
   logger.log(`Expected env file: ${envFile}`);
   logger.log(`LOG_LEVEL: ${process.env.LOG_LEVEL || 'undefined'}`);
   logger.log(`LOG_PRETTY: ${process.env.LOG_PRETTY || 'undefined'}`);
-  logger.log(`DATABASE_URL: ${process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 30) + '...' : 'undefined'}`);
+  logger.log(
+    `DATABASE_URL: ${process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 30) + '...' : 'undefined'}`,
+  );
   logger.log(`REDIS_HOST: ${process.env.REDIS_HOST || 'undefined'}`);
   logger.log(`REDIS_PORT: ${process.env.REDIS_PORT || 'undefined'}`);
   logger.log('================================');
@@ -40,11 +42,11 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   // API Versioning (Header-based)
-  // app.enableVersioning({
-  //   type: VersioningType.HEADER,
-  //   header: 'X-API-Version',
-  //   defaultVersion: '1',
-  // });
+  app.enableVersioning({
+    type: VersioningType.HEADER,
+    header: 'X-API-Version',
+    defaultVersion: '1',
+  });
 
   // Global pipes
   app.useGlobalPipes(
