@@ -40,11 +40,11 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   // API Versioning (Header-based)
-  app.enableVersioning({
-    type: VersioningType.HEADER,
-    header: 'X-API-Version',
-    defaultVersion: '1',
-  });
+  // app.enableVersioning({
+  //   type: VersioningType.HEADER,
+  //   header: 'X-API-Version',
+  //   defaultVersion: '1',
+  // });
 
   // Global pipes
   app.useGlobalPipes(
