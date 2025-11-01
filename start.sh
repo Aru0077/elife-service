@@ -1,10 +1,33 @@
 #!/bin/sh
-set -e  # 若迁移失败，立即退出容器，避免启动应用
+set -e
 
-# 执行Prisma数据库迁移（生产环境专用命令）
-echo "开始执行数据库迁移..."
-npx prisma migrate deploy
+log() {
+  printf '%s [start.sh] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1"
+}
 
-# 迁移成功后，启动NestJS应用
-echo "迁移完成，启动应用服务..."
-node dist/main
+SCHEMA_PATH="prisma/schema.prisma"
+NODE_VERSION="$(node -v 2>/dev/null || echo 'unavailable')"
+NPM_VERSION="$(npm -v 2>/dev/null || echo 'unavailable')"
+
+log "Bootstrap starting."
+log "Runtime versions: node ${NODE_VERSION}, npm ${NPM_VERSION}"
+
+if [ -z "${DATABASE_URL:-}" ]; then
+  log "Warning: DATABASE_URL is not set; Prisma commands may fail."
+fi
+
+log "Checking Prisma migration status..."
+if ! npx prisma migrate status --schema "$SCHEMA_PATH"; then
+  log "Migration status check failed."
+  exit 1
+fi
+
+log "Applying pending Prisma migrations..."
+if ! npx prisma migrate deploy --schema "$SCHEMA_PATH"; then
+  log "Migration deploy failed."
+  exit 1
+fi
+
+log "Database migrations applied successfully."
+log "Starting NestJS application..."
+exec node dist/main
