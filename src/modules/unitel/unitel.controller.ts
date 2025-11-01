@@ -11,13 +11,17 @@ import { PinoLogger } from 'nestjs-pino';
 import { JwtAuthGuard } from '@/modules/auth/user/guards/jwt-auth.guard';
 import { CurrentUser } from '@/modules/auth/user/decorators/current-user.decorator';
 import { UnitelService } from './unitel.service';
-import { QueryOrderDto, CreateOrderDto } from './dto';
+import { QueryOrderDto, CreateOrderDto, MsisdnParamDto } from './dto';
+import {
+  ServiceTypeResponse,
+  InvoiceResponse,
+} from '@/modules/api-services/unitel-api';
 
 /**
  * Unitel 订单控制器
  * 提供订单管理相关 API 接口
  */
-@Controller('operators/unitel/orders')
+@Controller('operators/unitel')
 @UseGuards(JwtAuthGuard) // 所有接口都需要 JWT 认证
 export class UnitelController {
   constructor(
@@ -25,6 +29,34 @@ export class UnitelController {
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(UnitelController.name);
+  }
+
+  /**
+   * 查询资费套餐（缓存优先）
+   * GET /operators/unitel/getServiceTypes/:msisdn
+   */
+  @Get('getServiceTypes/:msisdn')
+  async getServiceTypes(
+    @CurrentUser('openid') openid: string,
+    @Param() params: MsisdnParamDto,
+  ): Promise<ServiceTypeResponse> {
+    const msisdn: string = params.msisdn;
+    this.logger.debug(`用户 ${openid} 查询资费套餐: 手机号=${msisdn}`);
+    return await this.orderService.getServiceTypes(openid, msisdn);
+  }
+
+  /**
+   * 获取后付费账单
+   * GET /operators/unitel/getInvoice/:msisdn
+   */
+  @Get('getInvoice/:msisdn')
+  async getInvoice(
+    @CurrentUser('openid') openid: string,
+    @Param() params: MsisdnParamDto,
+  ): Promise<InvoiceResponse> {
+    const msisdn: string = params.msisdn;
+    this.logger.debug(`用户 ${openid} 查询后付费账单: 手机号=${msisdn}`);
+    return await this.orderService.getInvoice(openid, msisdn);
   }
 
   /**
@@ -38,7 +70,7 @@ export class UnitelController {
    *   "packageCode": "SD5000" (或账单日期)
    * }
    */
-  @Post()
+  @Post('orders')
   async createOrder(
     @CurrentUser('openid') openid: string,
     @Body() dto: CreateOrderDto,
@@ -57,7 +89,7 @@ export class UnitelController {
    * 获取当前用户的订单列表
    * GET /operators/unitel/orders?page=1&pageSize=20&paymentStatus=paid
    */
-  @Get()
+  @Get('orders')
   async getUserOrders(
     @CurrentUser('openid') openid: string,
     @Query() dto: QueryOrderDto,
@@ -72,7 +104,7 @@ export class UnitelController {
    * 获取订单详情
    * GET /operators/unitel/orders/:orderNo
    */
-  @Get(':orderNo')
+  @Get('orders/:orderNo')
   async getOrderDetail(@Param('orderNo') orderNo: string) {
     this.logger.debug(`查询订单详情: ${orderNo}`);
     return this.orderService.findByOrderNo(orderNo);
@@ -85,7 +117,7 @@ export class UnitelController {
    * 返回微信支付预支付交易会话标识（prepay_id）
    * 前端使用该prepay_id调用微信JSAPI完成支付
    */
-  @Post(':orderNo/pay')
+  @Post('orders/:orderNo/pay')
   async createPayment(
     @Param('orderNo') orderNo: string,
     @CurrentUser('openid') openid: string,

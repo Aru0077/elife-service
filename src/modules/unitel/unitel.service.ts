@@ -16,6 +16,8 @@ import { UnitelApiService } from '@/modules/api-services/unitel-api';
 import {
   RechargeResponse,
   PaymentResponse,
+  ServiceTypeResponse,
+  InvoiceResponse,
 } from '@/modules/api-services/unitel-api';
 
 /**
@@ -32,6 +34,29 @@ export class UnitelService {
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(UnitelService.name);
+  }
+
+  /**
+   * 查询资费套餐（缓存优先）
+   * @param openid 用户 openid
+   * @param msisdn 手机号
+   */
+  async getServiceTypes(
+    openid: string,
+    msisdn: string,
+  ): Promise<ServiceTypeResponse> {
+    this.logger.debug(`查询资费套餐: openid=${openid}, msisdn=${msisdn}`);
+    return this.unitelApiService.getCachedServiceTypes(msisdn, openid);
+  }
+
+  /**
+   * 查询后付费账单（缓存优先）
+   * @param openid 用户 openid
+   * @param msisdn 手机号
+   */
+  async getInvoice(openid: string, msisdn: string): Promise<InvoiceResponse> {
+    this.logger.debug(`查询后付费账单: openid=${openid}, msisdn=${msisdn}`);
+    return this.unitelApiService.getCachedInvoice(msisdn, openid);
   }
 
   /**
