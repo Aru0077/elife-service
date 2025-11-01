@@ -55,4 +55,5 @@ export interface PayInvoiceParams {
 export interface UnitelErrorResponse {
   result: string; // 如 "401"
   msg: string; // 如 "Unauthorized"
+  code?: string; // 第三方错误码（部分接口会返回）
 }

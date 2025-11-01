@@ -18,11 +18,28 @@ import {
   RechargeDataParams,
   PayInvoiceParams,
   CardItem,
+  UnitelErrorResponse,
 } from '../interfaces';
 import { PackageDetail } from '../interfaces/order.interface';
 import { OrderType } from '@prisma/client';
 import { UnitelCacheType } from '../enums';
+import { UnitelApiException } from '../errors/unitel-api.exception';
 
+function isUnitelErrorResponsePayload(
+  body: unknown,
+): body is UnitelErrorResponse {
+  if (!body || typeof body !== 'object') {
+    return false;
+  }
+
+  const candidate = body as Partial<UnitelErrorResponse>;
+  return (
+    'result' in candidate &&
+    'msg' in candidate &&
+    typeof candidate.result === 'string' &&
+    typeof candidate.msg === 'string'
+  );
+}
 /**
  * Unitel API 服务
  * 职责：封装 Unitel 第三方 API 调用
@@ -198,10 +215,27 @@ export class UnitelApiService {
       }
 
       // 4. 记录错误日志
-      const errorMsg: string =
-        error instanceof AxiosError
-          ? (error.response?.data as { msg?: string })?.msg || error.message
-          : String(error);
+      const isAxiosError = error instanceof AxiosError;
+      const responseBody: unknown = isAxiosError
+        ? error.response?.data
+        : undefined;
+      const statusCode = isAxiosError ? error.response?.status : undefined;
+      const unitelError = isUnitelErrorResponsePayload(responseBody)
+        ? responseBody
+        : undefined;
+      const originalErrorDetails = isAxiosError
+        ? {
+            message: error.message,
+            code: error.code,
+            status: statusCode,
+          }
+        : error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : { message: String(error) };
+
+      const errorMsg: string = isAxiosError
+        ? unitelError?.msg || error.message
+        : String(error);
 
       this.thirdPartyLogger.logApiError({
         traceId,
@@ -213,10 +247,8 @@ export class UnitelApiService {
           Authorization: 'Bearer ***REDACTED***',
         },
         requestBody: data,
-        responseStatus:
-          error instanceof AxiosError ? error.response?.status : undefined,
-        responseBody:
-          error instanceof AxiosError ? error.response?.data : undefined,
+        responseStatus: statusCode,
+        responseBody,
         duration,
         error: errorMsg,
         timestamp: new Date().toISOString(),
@@ -227,7 +259,14 @@ export class UnitelApiService {
         errorMsg,
       );
 
-      throw new Error(`Unitel API 错误: ${errorMsg}`);
+      throw new UnitelApiException({
+        traceId,
+        statusCode,
+        unitelResult: unitelError?.result,
+        unitelCode: unitelError?.code,
+        unitelMsg: unitelError?.msg || errorMsg,
+        originalError: originalErrorDetails,
+      });
     }
   }
 

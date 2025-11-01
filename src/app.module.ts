@@ -38,7 +38,7 @@ import { PaymentFlowModule } from '@/modules/payment-flow/payment-flow.module';
       useFactory: (config: ConfigService) => ({
         throttlers: [
           {
-            ttl: (config.get<number>('THROTTLE_TTL') || 60) * 1000,
+            ttl: config.get<number>('THROTTLE_TTL') || 60,
             limit: config.get<number>('THROTTLE_LIMIT') || 10,
           },
         ],

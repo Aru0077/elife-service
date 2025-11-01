@@ -1,4 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+  HttpException,
+} from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { OrderType } from '@prisma/client';
@@ -73,6 +78,9 @@ export class PaymentCallbackService {
         };
       }
 
+      // 将充值任务加入队列（异步处理）
+      const enqueueResult = await this.enqueueRechargeJob(order);
+
       // 更新支付状态为已支付
       await this.prisma.unitelOrder.update({
         where: { orderNo: outTradeNo },
@@ -87,19 +95,19 @@ export class PaymentCallbackService {
       // 标记回调为已处理
       await this.markCallbackProcessed(transactionId);
 
-      // 将充值任务加入队列（异步处理）
-      await this.enqueueRechargeJob(order);
-
       return {
         success: true,
-        message: '回调处理成功，充值任务已加入队列',
+        message:
+          enqueueResult === 'duplicate'
+            ? '充值任务已存在，保持幂等'
+            : '回调处理成功，充值任务已加入队列',
       };
     } catch (error) {
       this.logger.error('处理支付回调失败', error);
-      return {
-        success: false,
-        message: '处理失败',
-      };
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('支付回调处理失败');
     }
   }
 
@@ -135,7 +143,7 @@ export class PaymentCallbackService {
     orderType: OrderType;
     packageCode: string;
     amountMnt: { toNumber: () => number };
-  }): Promise<void> {
+  }): Promise<'enqueued' | 'duplicate'> {
     const jobData: RechargeJobData = {
       orderNo: order.orderNo,
       operator: 'unitel', // 当前只支持unitel
@@ -148,10 +156,21 @@ export class PaymentCallbackService {
       timestamp: Date.now(),
     };
 
-    await this.rechargeQueue.add(RECHARGE_JOB, jobData, {
-      jobId: order.orderNo, // 使用订单号作为任务ID，确保幂等性
-    });
-
-    this.logger.log(`充值任务已加入队列: ${order.orderNo}`);
+    try {
+      await this.rechargeQueue.add(RECHARGE_JOB, jobData, {
+        jobId: order.orderNo, // 使用订单号作为任务ID，确保幂等性
+      });
+      this.logger.log(`充值任务已加入队列: ${order.orderNo}`);
+      return 'enqueued';
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        /jobid?.*already exists/i.test(error.message)
+      ) {
+        this.logger.warn(`充值任务已存在，跳过重复入队: ${order.orderNo}`);
+        return 'duplicate';
+      }
+      throw error;
+    }
   }
 }

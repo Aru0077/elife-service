@@ -37,6 +37,7 @@ export const validationSchema = Joi.object({
   WECHAT_PAY_APIV3_KEY: Joi.string().length(32).required(), // 32字符的APIv3密钥
   WECHAT_PAY_NOTIFY_URL: Joi.string().uri().required(), // 支付回调URL
   WECHAT_PAY_REFUND_NOTIFY_URL: Joi.string().uri().optional(), // 退款回调URL（可选）
+  WECHAT_PAY_PLATFORM_CERT: Joi.string().required(), // 微信支付平台证书（Base64编码）
 
   // JWT 配置
   JWT_SECRET: Joi.string().min(32).required(),

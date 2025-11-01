@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
-import { createSign, createVerify } from 'crypto';
+import { createSign, createVerify, randomBytes } from 'crypto';
 import wechatPayConfig from '../config/wechat-pay.config';
 import { PaymentCallbackHeaders } from '../interfaces/wechat-pay.interface';
 
@@ -122,13 +122,12 @@ export class WechatPaySignatureService {
    * @returns 随机字符串
    */
   generateNonce(length = 32): string {
-    const chars =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    if (length <= 0) {
+      throw new Error('Nonce length must be greater than 0');
     }
-    return result;
+
+    const bytes = randomBytes(Math.ceil(length / 2));
+    return bytes.toString('hex').slice(0, length);
   }
 
   /**
